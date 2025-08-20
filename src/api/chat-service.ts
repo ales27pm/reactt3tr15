@@ -7,6 +7,8 @@ import { AIMessage, AIRequestOptions, AIResponse } from "../types/ai";
 import { getAnthropicClient } from "./anthropic";
 import { getOpenAIClient } from "./openai";
 import { getGrokClient } from "./grok";
+import { withRetry } from "../utils/retry";
+import { mapApiError } from "../utils/errors";
 
 /**
  * Get a text response from Anthropic
@@ -22,7 +24,7 @@ export const getAnthropicTextResponse = async (
     const client = getAnthropicClient();
     const defaultModel = "claude-3-5-sonnet-20240620";
 
-    const response = await client.messages.create({
+    const response = await withRetry(() => client.messages.create({
       model: options?.model || defaultModel,
       messages: messages.map((msg) => ({
         role: msg.role === "assistant" ? "assistant" : "user",
@@ -30,7 +32,7 @@ export const getAnthropicTextResponse = async (
       })),
       max_tokens: options?.maxTokens || 2048,
       temperature: options?.temperature || 0.7,
-    });
+    }));
 
     // Handle content blocks from the response
     const content = response.content.reduce((acc, block) => {
@@ -49,8 +51,7 @@ export const getAnthropicTextResponse = async (
       },
     };
   } catch (error) {
-    console.error("Anthropic API Error:", error);
-    throw error;
+    throw mapApiError(error, "anthropic");
   }
 };
 
@@ -74,12 +75,12 @@ export const getOpenAITextResponse = async (messages: AIMessage[], options?: AIR
     const client = getOpenAIClient();
     const defaultModel = "gpt-4o"; //accepts images as well, use this for image analysis
 
-    const response = await client.chat.completions.create({
+    const response = await withRetry(() => client.chat.completions.create({
       model: options?.model || defaultModel,
       messages: messages,
       temperature: options?.temperature ?? 0.7,
       max_tokens: options?.maxTokens || 2048,
-    });
+    }));
 
     return {
       content: response.choices[0]?.message?.content || "",
@@ -90,8 +91,7 @@ export const getOpenAITextResponse = async (messages: AIMessage[], options?: AIR
       },
     };
   } catch (error) {
-    console.error("OpenAI API Error:", error);
-    throw error;
+    throw mapApiError(error, "openai");
   }
 };
 
@@ -115,12 +115,12 @@ export const getGrokTextResponse = async (messages: AIMessage[], options?: AIReq
     const client = getGrokClient();
     const defaultModel = "grok-3-beta";
 
-    const response = await client.chat.completions.create({
+    const response = await withRetry(() => client.chat.completions.create({
       model: options?.model || defaultModel,
       messages: messages,
       temperature: options?.temperature ?? 0.7,
       max_tokens: options?.maxTokens || 2048,
-    });
+    }));
 
     return {
       content: response.choices[0]?.message?.content || "",
@@ -131,8 +131,7 @@ export const getGrokTextResponse = async (messages: AIMessage[], options?: AIReq
       },
     };
   } catch (error) {
-    console.error("Grok API Error:", error);
-    throw error;
+    throw mapApiError(error, "grok");
   }
 };
 

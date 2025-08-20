@@ -9,9 +9,11 @@ You can use this function to transcribe audio files, and it will return the text
  * @param localAudioUri - The local URI of the audio file to transcribe. Obtained via the expo-av library.
  * @returns The text of the audio file
  */
+import { withRetry } from "../utils/retry";
+import { mapApiError, toApiError } from "../utils/errors";
+
 export const transcribeAudio = async (localAudioUri: string) => {
   try {
-    // Create FormData for the audio file
     const formData = new FormData();
     formData.append("file", {
       uri: localAudioUri,
@@ -23,27 +25,29 @@ export const transcribeAudio = async (localAudioUri: string) => {
 
     const OPENAI_API_KEY = process.env.EXPO_PUBLIC_VIBECODE_OPENAI_API_KEY;
     if (!OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is not set");
+      throw toApiError({
+        code: "auth_missing",
+        title: "Authorization required",
+        message: "AI is unavailable right now due to missing credentials.",
+        provider: "openai",
+        retryable: false,
+      });
     }
 
-    // API call to OpenAI's gpt-4o-transcribe
-    const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    const response = await withRetry(() => fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
       body: formData,
-    });
+    }));
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Transcription failed: ${errorText}`);
+      throw mapApiError({ status: response.status, message: errorText }, "openai");
     }
 
     const result = await response.json();
     return result.text;
   } catch (error) {
-    console.error("Transcription error:", error);
-    throw error;
+    throw mapApiError(error, "openai");
   }
 };

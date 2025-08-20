@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTetrisStore } from '../state/tetrisStore';
+import MinimalModal from "../components/MinimalModal";
 
 const { width } = Dimensions.get('window');
 const BLOCK_SIZE = Math.min(width * 0.05, 20);
@@ -148,6 +149,7 @@ const PIECES = {
 
 export default function TetrisScreen() {
   const insets = useSafeAreaInsets();
+  const [demoErrorVisible, setDemoErrorVisible] = useState(false);
   const {
     grid,
     currentPiece,
@@ -331,6 +333,13 @@ export default function TetrisScreen() {
           >
             <Text style={styles.buttonText}>RESET</Text>
           </Pressable>
+          
+          <Pressable
+            style={styles.controlButton}
+            onPress={() => setDemoErrorVisible(true)}
+          >
+            <Text style={styles.buttonText}>TEST ERROR</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -343,6 +352,17 @@ export default function TetrisScreen() {
           </Pressable>
         </View>
       )}
+
+      <MinimalModal
+        visible={demoErrorVisible}
+        title="Service unavailable"
+        message="Service is currently unavailable. Please try again later."
+        primaryActionLabel="Try again"
+        onPrimaryAction={() => setDemoErrorVisible(false)}
+        secondaryActionLabel="Dismiss"
+        onSecondaryAction={() => setDemoErrorVisible(false)}
+        onDismiss={() => setDemoErrorVisible(false)}
+      />
 
       <View style={styles.controls}>
         <View style={styles.controlRow}>
