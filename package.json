@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "push:github": "bash scripts/github.push.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
