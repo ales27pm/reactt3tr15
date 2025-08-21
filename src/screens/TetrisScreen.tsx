@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, Directions } from "react-native-gesture-handler";
 import { runOnJS, useSharedValue } from "react-native-reanimated";
+import { Ionicons } from "@expo/vector-icons";
 import { useTetrisStore } from "../state/tetrisStore";
 import { PIECES, GRID_WIDTH, GRID_HEIGHT } from "../state/tetrominoes";
 import { ghostDropY } from "../state/engine";
@@ -33,6 +34,7 @@ const TERMINAL_BG = "#000";
 export default function TetrisScreen() {
   const insets = useSafeAreaInsets();
   const [demoErrorVisible, setDemoErrorVisible] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
 
   // Selectors (narrow to reduce re-renders)
   const grid = useTetrisStore((s) => s.grid);
@@ -46,6 +48,11 @@ export default function TetrisScreen() {
   const gameOver = useTetrisStore((s) => s.gameOver);
   const paused = useTetrisStore((s) => s.paused);
   const asciiMode = useTetrisStore((s) => s.asciiMode);
+  const showGridLines = useTetrisStore((s) => s.showGridLines);
+  const showGhost = useTetrisStore((s) => s.showGhost);
+  const enableHaptics = useTetrisStore((s) => s.enableHaptics);
+  const slashTrailEnabled = useTetrisStore((s) => s.slashTrailEnabled);
+  const showHints = useTetrisStore((s) => s.showHints);
 
   const initializeGame = useTetrisStore((s) => s.initializeGame);
   const movePiece = useTetrisStore((s) => s.movePiece);
@@ -57,6 +64,11 @@ export default function TetrisScreen() {
   const pauseGame = useTetrisStore((s) => s.pauseGame);
   const resetGame = useTetrisStore((s) => s.resetGame);
   const toggleAsciiMode = useTetrisStore((s) => s.toggleAsciiMode);
+  const toggleGridLines = useTetrisStore((s) => s.toggleGridLines);
+  const toggleGhost = useTetrisStore((s) => s.toggleGhost);
+  const toggleHaptics = useTetrisStore((s) => s.toggleHaptics);
+  const toggleSlashTrail = useTetrisStore((s) => s.toggleSlashTrail);
+  const hideHints = useTetrisStore((s) => s.hideHints);
 
   // Start
   useEffect(() => {
@@ -129,9 +141,9 @@ export default function TetrisScreen() {
   }, [gameOver, paused, hardDrop]);
 
   // Haptics helpers (called from JS via runOnJS)
-  const hapticLight = () => { if (Platform.OS === "ios") Vibration.vibrate(8); };
-  const hapticMedium = () => { if (Platform.OS === "ios") Vibration.vibrate(10); };
-  const hapticStrong = () => { if (Platform.OS === "ios") Vibration.vibrate(50); };
+  const hapticLight = () => { if (enableHaptics && Platform.OS === "ios") Vibration.vibrate(8); };
+  const hapticMedium = () => { if (enableHaptics && Platform.OS === "ios") Vibration.vibrate(10); };
+  const hapticStrong = () => { if (enableHaptics && Platform.OS === "ios") Vibration.vibrate(50); };
 
   // Shared flags to avoid worklet reading React state directly
   const pausedSV = useSharedValue(paused ? 1 : 0);
@@ -395,48 +407,61 @@ export default function TetrisScreen() {
             <View style={[styles.grid, { width: PLAY_WIDTH, height: PLAY_HEIGHT }] }>
               {asciiMode ? (
                 <>
-                  {renderAsciiGhost()}
+                  {showGhost && renderAsciiGhost()}
                   {renderAsciiBoard()}
                   <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-                    {renderGridLines()}
+                    {showGridLines && renderGridLines()}
                   </View>
                 </>
               ) : (
                 <>
                   {renderGrid()}
                   <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-                    {renderGhostClassic()}
-                    {renderGridLines()}
+                    {showGhost && renderGhostClassic()}
+                    {showGridLines && renderGridLines()}
                   </View>
                 </>
               )}
-              <SlashTrail
-                isActive={isSlashActive}
-                initialPoint={slashInitialPoint.current ?? undefined}
-                registerAddPoint={registerAddPoint}
-              />
+              {slashTrailEnabled && (
+                <SlashTrail
+                  isActive={isSlashActive}
+                  initialPoint={slashInitialPoint.current ?? undefined}
+                  registerAddPoint={registerAddPoint}
+                />
+              )}
             </View>
           </GestureDetector>
         </View>
 
         <View style={styles.rightPanel}>
-          <Pressable style={styles.controlButton} onPress={pauseGame}>
+          <Pressable style={({pressed}) => [styles.controlButton, pressed && { opacity: 0.85 }]} onPress={pauseGame}>
             <Text style={styles.buttonText}>{paused ? "RESUME" : "PAUSE"}</Text>
           </Pressable>
 
-          <Pressable style={styles.controlButton} onPress={resetGame}>
+          <Pressable style={({pressed}) => [styles.controlButton, pressed && { opacity: 0.85 }]} onPress={resetGame}>
             <Text style={styles.buttonText}>RESET</Text>
           </Pressable>
 
-          <Pressable style={styles.controlButton} onPress={toggleAsciiMode}>
+          <Pressable style={({pressed}) => [styles.controlButton, pressed && { opacity: 0.85 }]} onPress={toggleAsciiMode}>
             <Text style={styles.buttonText}>{asciiMode ? "ASCII ON" : "ASCII OFF"}</Text>
           </Pressable>
 
-          <Pressable style={[styles.controlButton, { opacity: canHold ? 1 : 0.5 }]} onPress={holdSwap} disabled={!canHold}>
+          <Pressable style={({pressed}) => [styles.controlButton, { opacity: canHold ? 1 : 0.5 }, pressed && { opacity: 0.85 }]} onPress={holdSwap} disabled={!canHold}>
             <Text style={styles.buttonText}>HOLD</Text>
+          </Pressable>
+
+          <Pressable style={({pressed}) => [styles.controlButton, pressed && { opacity: 0.85 }]} onPress={() => setSettingsVisible(true)}>
+            <Text style={styles.buttonText}>SETTINGS</Text>
           </Pressable>
         </View>
       </View>
+
+      {showHints && (
+        <View style={styles.hintsOverlay}>
+          <Text style={styles.hintText}>Tap = Rotate   ↑ fling = Hard drop   ↓ fling = Soft   Pan = Move</Text>
+          <Pressable onPress={hideHints} style={styles.hintDismiss}><Text style={styles.hintDismissText}>×</Text></Pressable>
+        </View>
+      )}
 
       {gameOver && (
         <View style={styles.gameOverOverlay}>
@@ -445,6 +470,19 @@ export default function TetrisScreen() {
           <Pressable style={styles.restartButton} onPress={resetGame}>
             <Text style={styles.buttonText}>RESTART</Text>
           </Pressable>
+        </View>
+      )}
+
+      {settingsVisible && (
+        <View style={styles.settingsBackdrop}>
+          <View style={styles.settingsPanel}>
+            <Text style={styles.settingsTitle}>Settings</Text>
+            <Pressable style={styles.settingRow} onPress={toggleGridLines}><Text style={styles.settingText}>Grid lines: {showGridLines ? "On" : "Off"}</Text></Pressable>
+            <Pressable style={styles.settingRow} onPress={toggleGhost}><Text style={styles.settingText}>Ghost: {showGhost ? "On" : "Off"}</Text></Pressable>
+            <Pressable style={styles.settingRow} onPress={toggleHaptics}><Text style={styles.settingText}>Haptics: {enableHaptics ? "On" : "Off"}</Text></Pressable>
+            <Pressable style={styles.settingRow} onPress={toggleSlashTrail}><Text style={styles.settingText}>Slash trail: {slashTrailEnabled ? "On" : "Off"}</Text></Pressable>
+            <Pressable style={[styles.dropButton, { marginTop: 12 }]} onPress={() => setSettingsVisible(false)}><Text style={styles.buttonText}>Close</Text></Pressable>
+          </View>
         </View>
       )}
 
@@ -461,21 +499,21 @@ export default function TetrisScreen() {
 
       <View style={styles.controls}>
         <View style={styles.controlRow}>
-          <Pressable style={styles.moveButton} onPress={() => handleMove("left")}>
+          <Pressable style={({pressed}) => [styles.moveButton, pressed && { opacity: 0.85 }]} onPress={() => handleMove("left")}>
             <Text style={styles.buttonText}>←</Text>
           </Pressable>
-          <Pressable style={styles.moveButton} onPress={handleRotate}>
+          <Pressable style={({pressed}) => [styles.moveButton, pressed && { opacity: 0.85 }]} onPress={handleRotate}>
             <Text style={styles.buttonText}>↻</Text>
           </Pressable>
-          <Pressable style={styles.moveButton} onPress={() => handleMove("right")}>
+          <Pressable style={({pressed}) => [styles.moveButton, pressed && { opacity: 0.85 }]} onPress={() => handleMove("right")}>
             <Text style={styles.buttonText}>→</Text>
           </Pressable>
         </View>
         <View style={styles.controlRow}>
-          <Pressable style={styles.dropButton} onPress={handleDrop}>
+          <Pressable style={({pressed}) => [styles.dropButton, pressed && { opacity: 0.85 }]} onPress={handleDrop}>
             <Text style={styles.buttonText}>SOFT DROP</Text>
           </Pressable>
-          <Pressable style={styles.dropButton} onPress={handleHardDrop}>
+          <Pressable style={({pressed}) => [styles.dropButton, pressed && { opacity: 0.85 }]} onPress={handleHardDrop}>
             <Text style={styles.buttonText}>HARD DROP</Text>
           </Pressable>
         </View>
@@ -497,7 +535,7 @@ const styles = StyleSheet.create({
   nextPieceBox: { width: BLOCK_SIZE * 4 * 0.6, height: BLOCK_SIZE * 4 * 0.6, borderWidth: 2, borderColor: TERMINAL_GREEN, position: "relative", alignItems: "center", justifyContent: "center", overflow: "hidden" },
   nextCell: { position: "absolute", width: BLOCK_SIZE * 0.6, height: BLOCK_SIZE * 0.6, borderWidth: 1, borderColor: TERMINAL_DARK_GREEN },
   playArea: { alignItems: "center" },
-  grid: { flexDirection: "row", flexWrap: "wrap", borderWidth: 2, borderColor: TERMINAL_GREEN, position: "relative", overflow: "hidden" },
+  grid: { flexDirection: "row", flexWrap: "wrap", borderWidth: 2, borderColor: TERMINAL_GREEN, position: "relative", overflow: "hidden", shadowColor: TERMINAL_GREEN, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
   cell: { width: CELL, height: CELL },
   rightPanel: { gap: 10 },
   controlButton: { backgroundColor: TERMINAL_DARK_GREEN, paddingHorizontal: 15, paddingVertical: 10, borderRadius: 5, borderWidth: 1, borderColor: TERMINAL_GREEN },
@@ -515,4 +553,15 @@ const styles = StyleSheet.create({
   asciiGlyph: { position: "absolute", color: "#79F28A", fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }), textShadowColor: "#00FF00", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6, textAlign: "center" },
   gridLineV: { position: "absolute", top: 0, width: StyleSheet.hairlineWidth, backgroundColor: TERMINAL_DARK_GREEN, opacity: 0.6 },
   gridLineH: { position: "absolute", left: 0, height: StyleSheet.hairlineWidth, backgroundColor: TERMINAL_DARK_GREEN, opacity: 0.6 },
+
+  // UX additions
+  hintsOverlay: { position: "absolute", top: 10, right: 10, backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: TERMINAL_GREEN, flexDirection: "row", alignItems: "center", gap: 8 },
+  hintText: { color: TERMINAL_GREEN, fontSize: 12 },
+  hintDismiss: { marginLeft: 8, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: TERMINAL_GREEN, borderRadius: 6 },
+  hintDismissText: { color: TERMINAL_GREEN, fontSize: 14 },
+  settingsBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" },
+  settingsPanel: { width: 280, backgroundColor: "#000", borderWidth: 2, borderColor: TERMINAL_GREEN, borderRadius: 12, padding: 16, gap: 8 },
+  settingsTitle: { color: TERMINAL_GREEN, fontSize: 18, fontWeight: "bold", marginBottom: 6 },
+  settingRow: { paddingVertical: 8, paddingHorizontal: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: TERMINAL_DARK_GREEN, borderRadius: 8 },
+  settingText: { color: TERMINAL_GREEN, fontSize: 14 },
 });

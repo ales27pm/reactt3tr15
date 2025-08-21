@@ -49,6 +49,12 @@ interface TetrisState {
   combo: number; // successive line clears
   backToBack: boolean; // last clear was Tetris
   lockExpireAt: number | null;
+  // settings
+  showGridLines: boolean;
+  showGhost: boolean;
+  enableHaptics: boolean;
+  slashTrailEnabled: boolean;
+  showHints: boolean;
 }
 
 interface TetrisActions {
@@ -62,6 +68,12 @@ interface TetrisActions {
   pauseGame: () => void;
   resetGame: () => void;
   toggleAsciiMode: () => void;
+  // settings toggles
+  toggleGridLines: () => void;
+  toggleGhost: () => void;
+  toggleHaptics: () => void;
+  toggleSlashTrail: () => void;
+  hideHints: () => void;
 }
 
 export const useTetrisStore = create<TetrisState & TetrisActions>()(
@@ -82,6 +94,12 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
       combo: 0,
       backToBack: false,
       lockExpireAt: null,
+      // settings defaults
+      showGridLines: true,
+      showGhost: true,
+      enableHaptics: true,
+      slashTrailEnabled: true,
+      showHints: true,
 
       initializeGame: () => {
         const nextQueue = ensureQueue([], 14);
@@ -197,11 +215,26 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
       resetGame: () => get().initializeGame(),
 
       toggleAsciiMode: () => set((s) => ({ asciiMode: !s.asciiMode })),
+
+      // settings
+      toggleGridLines: () => set((s) => ({ showGridLines: !s.showGridLines })),
+      toggleGhost: () => set((s) => ({ showGhost: !s.showGhost })),
+      toggleHaptics: () => set((s) => ({ enableHaptics: !s.enableHaptics })),
+      toggleSlashTrail: () => set((s) => ({ slashTrailEnabled: !s.slashTrailEnabled })),
+      hideHints: () => set(() => ({ showHints: false })),
     }),
     {
       name: "tetris-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({ highScore: state.highScore, asciiMode: state.asciiMode }),
+      partialize: (state) => ({
+        highScore: state.highScore,
+        asciiMode: state.asciiMode,
+        showGridLines: state.showGridLines,
+        showGhost: state.showGhost,
+        enableHaptics: state.enableHaptics,
+        slashTrailEnabled: state.slashTrailEnabled,
+        showHints: state.showHints,
+      }),
     }
   )
 );
