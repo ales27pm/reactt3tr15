@@ -156,6 +156,7 @@ export default function TetrisScreen() {
 
   const pan = Gesture.Pan()
     .onBegin((e) => {
+      slashActiveSV.value = 1;
       runOnJS(startSlash)({ x: e.x, y: e.y, timestamp: Date.now() });
       accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0;
     })
@@ -173,18 +174,25 @@ export default function TetrisScreen() {
       accY.value += dy;
       while (accY.value >= CELL) { runOnJS(dropPiece)(); runOnJS(hapticLight)(); accY.value -= CELL; }
     })
-    .onEnd(() => { accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0; runOnJS(stopSlash)(); });
+    .onEnd(() => { accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0; slashActiveSV.value = 0; runOnJS(stopSlash)(); });
 
-  const tap = Gesture.Tap().onEnd(() => {
-    if (pausedSV.value || gameOverSV.value) return; runOnJS(rotatePiece)(); runOnJS(hapticMedium)();
-  });
+  const slashActiveSV = useSharedValue(0);
+
+  const tap = Gesture.Tap()
+    .maxDistance(8)
+    .onEnd(() => {
+      if (pausedSV.value || gameOverSV.value || slashActiveSV.value) return; runOnJS(rotatePiece)(); runOnJS(hapticMedium)();
+    });
   const flingUp = Gesture.Fling().direction(Directions.UP).onEnd(() => {
     if (pausedSV.value || gameOverSV.value) return; runOnJS(hardDrop)(); runOnJS(hapticStrong)();
   });
   const flingDown = Gesture.Fling().direction(Directions.DOWN).onEnd(() => {
     if (pausedSV.value || gameOverSV.value) return; runOnJS(dropPiece)(); runOnJS(hapticLight)();
   });
-  const composedGesture = Gesture.Simultaneous(pan, tap, flingUp, flingDown);
+
+  tap.requireExternalGestureToFail(pan, flingUp, flingDown);
+
+  const composedGesture = Gesture.Exclusive(pan, flingUp, flingDown, tap);
 
   const renderAsciiGhost = () => {
     if (!currentPiece) return null;

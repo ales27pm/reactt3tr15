@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { Canvas, Path, Skia } from "@shopify/react-native-skia";
 
@@ -43,7 +43,8 @@ export default function SlashTrail({ isActive, initialPoint, registerAddPoint }:
       const lp = last.points[last.points.length - 1];
       const dx = p.x - lp.x; const dy = p.y - lp.y;
       const dist2 = dx * dx + dy * dy;
-      if (dist2 < 9) return prev; // min ~3px spacing
+      const dt = p.timestamp - lp.timestamp;
+      if (dist2 < 9 || dt < 8) return prev; // min spacing and time throttle
       if (last.points.length >= MAX_SLASH_POINTS) last.points.shift();
       last.points.push(p);
       return next;
@@ -61,16 +62,28 @@ export default function SlashTrail({ isActive, initialPoint, registerAddPoint }:
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <Canvas style={StyleSheet.absoluteFill}>
         {trails.map(trail => (
-          <Path
-            key={trail.id}
-            path={createPath(trail.points)}
-            style="stroke"
-            strokeWidth={SLASH_WIDTH}
-            color={SLASH_COLOR}
-            strokeJoin="round"
-            strokeCap="round"
-            opacity={computeOpacity(trail.points)}
-          />
+          <>
+            <Path
+              key={`g-${trail.id}`}
+              path={createPath(trail.points)}
+              style="stroke"
+              strokeWidth={SLASH_WIDTH * 1.8}
+              color={SLASH_COLOR}
+              strokeJoin="round"
+              strokeCap="round"
+              opacity={computeOpacity(trail.points) * 0.25}
+            />
+            <Path
+              key={`m-${trail.id}`}
+              path={createPath(trail.points)}
+              style="stroke"
+              strokeWidth={SLASH_WIDTH}
+              color={SLASH_COLOR}
+              strokeJoin="round"
+              strokeCap="round"
+              opacity={computeOpacity(trail.points)}
+            />
+          </>
         ))}
       </Canvas>
     </View>
