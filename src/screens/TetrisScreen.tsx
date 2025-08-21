@@ -136,6 +136,7 @@ export default function TetrisScreen() {
   // Shared flags to avoid worklet reading React state directly
   const pausedSV = useSharedValue(paused ? 1 : 0);
   const gameOverSV = useSharedValue(gameOver ? 1 : 0);
+  const slashActiveSV = useSharedValue(0);
   useEffect(() => { pausedSV.value = paused ? 1 : 0; }, [paused]);
   useEffect(() => { gameOverSV.value = gameOver ? 1 : 0; }, [gameOver]);
 
@@ -157,13 +158,13 @@ export default function TetrisScreen() {
   const pan = Gesture.Pan()
     .onBegin((e) => {
       slashActiveSV.value = 1;
-      runOnJS(startSlash)({ x: e.x, y: e.y, timestamp: Date.now() });
+      runOnJS(startSlash)({ x: e.absoluteX, y: e.absoluteY, timestamp: Date.now() });
       accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0;
     })
     .onUpdate((e) => {
       if (pausedSV.value || gameOverSV.value) return;
       // slash trail
-      runOnJS(addSlashPointJS)({ x: e.x, y: e.y, timestamp: Date.now() });
+      runOnJS(addSlashPointJS)({ x: e.absoluteX, y: e.absoluteY, timestamp: Date.now() });
       // movement
       const dx = e.translationX - lastTX.value;
       const dy = e.translationY - lastTY.value;
@@ -175,8 +176,6 @@ export default function TetrisScreen() {
       while (accY.value >= CELL) { runOnJS(dropPiece)(); runOnJS(hapticLight)(); accY.value -= CELL; }
     })
     .onEnd(() => { accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0; slashActiveSV.value = 0; runOnJS(stopSlash)(); });
-
-  const slashActiveSV = useSharedValue(0);
 
   const tap = Gesture.Tap()
     .maxDistance(8)
@@ -391,7 +390,7 @@ export default function TetrisScreen() {
 
         <View style={styles.playArea}>
           <GestureDetector gesture={composedGesture}>
-            <View style={[styles.grid, { width: PLAY_WIDTH, height: PLAY_HEIGHT }]}>
+            <View style={[styles.grid, { width: PLAY_WIDTH, height: PLAY_HEIGHT }] }>
               {asciiMode ? (
                 <>
                   {renderAsciiGhost()}
