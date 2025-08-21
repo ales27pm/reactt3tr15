@@ -36,3 +36,6 @@ yarn-error.*
 # iOS & Android
 ios/
 android/
+
+# Secrets (do not commit)
+.specialenv/
