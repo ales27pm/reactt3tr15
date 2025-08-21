@@ -13,13 +13,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, Directions } from "react-native-gesture-handler";
 import { runOnJS, useSharedValue } from "react-native-reanimated";
 import { useTetrisStore } from "../state/tetrisStore";
-import { composeAsciiGrid, composeAsciiPiece, getCharAspect, getGlyphForColor } from "../utils/ascii";
+import { PIECES, GRID_WIDTH, GRID_HEIGHT } from "../state/tetrominoes";
+import { ghostDropY } from "../state/engine";
+import { getGlyphForColor } from "../utils/ascii";
 import MinimalModal from "../components/MinimalModal";
 
 const { width } = Dimensions.get("window");
 const BLOCK_SIZE = Math.min(width * 0.05, 20);
-const GRID_WIDTH = 10;
-const GRID_HEIGHT = 20;
 const CELL = PixelRatio.roundToNearestPixel(BLOCK_SIZE);
 const PLAY_WIDTH = CELL * GRID_WIDTH;
 const PLAY_HEIGHT = CELL * GRID_HEIGHT;
@@ -29,174 +29,75 @@ const TERMINAL_GREEN = "#00FF00";
 const TERMINAL_DARK_GREEN = "#00AA00";
 const TERMINAL_BG = "#000";
 
-// Piece definitions with proper SRS data
-const PIECES: any = {
-  I: {
-    shape: [
-      [0, 0, 0, 0],
-      [1, 1, 1, 1],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-    ],
-    color: "#00FFFF",
-    srs: {
-      "0-R": [{ x: 0, y: 0 }, { x: -2, y: 0 }, { x: 1, y: 0 }, { x: -2, y: -1 }, { x: 1, y: 2 }],
-      "R-0": [{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: -1, y: 0 }, { x: 2, y: 1 }, { x: -1, y: -2 }],
-      "R-2": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: 2, y: 0 }, { x: -1, y: 2 }, { x: 2, y: -1 }],
-      "2-R": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: -2, y: 0 }, { x: 1, y: -2 }, { x: -2, y: 1 }],
-      "2-L": [{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: -1, y: 0 }, { x: 2, y: 1 }, { x: -1, y: -2 }],
-      "L-2": [{ x: 0, y: 0 }, { x: -2, y: 0 }, { x: 1, y: 0 }, { x: -2, y: -1 }, { x: 1, y: 2 }],
-      "L-0": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: -2, y: 0 }, { x: 1, y: -2 }, { x: -2, y: 1 }],
-      "0-L": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: 2, y: 0 }, { x: -1, y: 2 }, { x: 2, y: -1 }],
-    },
-  },
-  J: {
-    shape: [
-      [1, 0, 0],
-      [1, 1, 1],
-      [0, 0, 0],
-    ],
-    color: "#0000FF",
-    srs: {
-      "0-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
-      "R-0": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
-      "R-2": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
-      "2-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
-      "2-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
-      "L-2": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
-      "L-0": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
-      "0-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
-    },
-  },
-  L: {
-    shape: [
-      [0, 0, 1],
-      [1, 1, 1],
-      [0, 0, 0],
-    ],
-    color: "#FFA500",
-    srs: {
-      "0-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
-      "R-0": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
-      "R-2": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
-      "2-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
-      "2-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
-      "L-2": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
-      "L-0": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
-      "0-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
-    },
-  },
-  O: {
-    shape: [
-      [1, 1],
-      [1, 1],
-    ],
-    color: "#FFFF00",
-    srs: {},
-  },
-  S: {
-    shape: [
-      [0, 1, 1],
-      [1, 1, 0],
-      [0, 0, 0],
-    ],
-    color: "#00FF00",
-    srs: {
-      "0-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
-      "R-0": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
-      "R-2": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
-      "2-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
-      "2-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
-      "L-2": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
-      "L-0": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
-      "0-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
-    },
-  },
-  T: {
-    shape: [
-      [0, 1, 0],
-      [1, 1, 1],
-      [0, 0, 0],
-    ],
-    color: "#800080",
-    srs: {
-      "0-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
-      "R-0": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
-      "R-2": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
-      "2-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
-      "2-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
-      "L-2": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
-      "L-0": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
-      "0-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
-    },
-  },
-  Z: {
-    shape: [
-      [1, 1, 0],
-      [0, 1, 1],
-      [0, 0, 0],
-    ],
-    color: "#FF0000",
-    srs: {
-      "0-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
-      "R-0": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
-      "R-2": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
-      "2-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
-      "2-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
-      "L-2": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
-      "L-0": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
-      "0-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
-    },
-  },
-};
-
 export default function TetrisScreen() {
   const insets = useSafeAreaInsets();
   const [demoErrorVisible, setDemoErrorVisible] = useState(false);
 
-  const {
-    grid,
-    currentPiece,
-    nextPiece,
-    score,
-    level,
-    lines,
-    gameOver,
-    paused,
-    asciiMode,
-    initializeGame,
-    movePiece,
-    rotatePiece,
-    dropPiece,
-    hardDrop,
-    pauseGame,
-    resetGame,
-    toggleAsciiMode,
-  } = useTetrisStore();
+  // Selectors (narrow to reduce re-renders)
+  const grid = useTetrisStore((s) => s.grid);
+  const currentPiece = useTetrisStore((s) => s.currentPiece);
+  const nextQueue = useTetrisStore((s) => s.nextQueue);
+  const holdPiece = useTetrisStore((s) => s.holdPiece);
+  const canHold = useTetrisStore((s) => s.canHold);
+  const score = useTetrisStore((s) => s.score);
+  const level = useTetrisStore((s) => s.level);
+  const lines = useTetrisStore((s) => s.lines);
+  const gameOver = useTetrisStore((s) => s.gameOver);
+  const paused = useTetrisStore((s) => s.paused);
+  const asciiMode = useTetrisStore((s) => s.asciiMode);
 
-  const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
-  const dropIntervalRef = useRef(1000);
+  const initializeGame = useTetrisStore((s) => s.initializeGame);
+  const movePiece = useTetrisStore((s) => s.movePiece);
+  const rotatePiece = useTetrisStore((s) => s.rotatePiece);
+  const gravityStep = useTetrisStore((s) => s.gravityStep);
+  const dropPiece = useTetrisStore((s) => s.dropPiece);
+  const hardDrop = useTetrisStore((s) => s.hardDrop);
+  const holdSwap = useTetrisStore((s) => s.holdSwap);
+  const pauseGame = useTetrisStore((s) => s.pauseGame);
+  const resetGame = useTetrisStore((s) => s.resetGame);
+  const toggleAsciiMode = useTetrisStore((s) => s.toggleAsciiMode);
 
+  // Start
   useEffect(() => {
     initializeGame();
   }, [initializeGame]);
 
-  useEffect(() => {
-    if (!gameOver && !paused) {
-      gameLoopRef.current = setInterval(() => {
-        dropPiece();
-      }, dropIntervalRef.current);
-    } else {
-      if (gameLoopRef.current) clearInterval(gameLoopRef.current);
-    }
-    return () => {
-      if (gameLoopRef.current) clearInterval(gameLoopRef.current);
-    };
-  }, [gameOver, paused, dropPiece]);
+  // RAF gravity loop with lock delay in store
+  const rafId = useRef<number | null>(null);
+  const lastTs = useRef<number>(0);
+  const acc = useRef<number>(0);
+  const intervalRef = useRef<number>(1000);
 
   useEffect(() => {
-    dropIntervalRef.current = Math.max(50, 1000 - level * 50);
+    intervalRef.current = Math.max(50, 1000 - level * 50);
   }, [level]);
+
+  useEffect(() => {
+    const loop = (ts: number) => {
+      if (rafId.current == null) return; // stopped
+      if (gameOver || paused) {
+        rafId.current = requestAnimationFrame(loop);
+        lastTs.current = ts;
+        return;
+      }
+      if (lastTs.current === 0) lastTs.current = ts;
+      const dt = ts - lastTs.current;
+      lastTs.current = ts;
+      acc.current += dt;
+      while (acc.current >= intervalRef.current) {
+        gravityStep();
+        acc.current -= intervalRef.current;
+      }
+      rafId.current = requestAnimationFrame(loop);
+    };
+    rafId.current = requestAnimationFrame(loop);
+    return () => {
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+      rafId.current = null;
+      lastTs.current = 0;
+      acc.current = 0;
+    };
+  }, [gravityStep, gameOver, paused]);
 
   const handleMove = useCallback(
     (direction: "left" | "right") => {
@@ -226,33 +127,54 @@ export default function TetrisScreen() {
     }
   }, [gameOver, paused, hardDrop]);
 
-  const isValid = (
-    testX: number,
-    testY: number,
-    shape: number[][]
-  ) => {
-    for (let r = 0; r < shape.length; r++) {
-      for (let c = 0; c < shape[r].length; c++) {
-        if (!shape[r][c]) continue;
-        const x = testX + c;
-        const y = testY + r;
-        if (x < 0 || x >= GRID_WIDTH || y >= GRID_HEIGHT) return false;
-        if (y >= 0 && grid[y]?.[x]) return false;
-      }
-    }
-    return true;
-  };
+  // Haptics helpers (called from JS via runOnJS)
+  const hapticLight = () => { if (Platform.OS === "ios") Vibration.vibrate(8); };
+  const hapticMedium = () => { if (Platform.OS === "ios") Vibration.vibrate(10); };
+  const hapticStrong = () => { if (Platform.OS === "ios") Vibration.vibrate(50); };
 
-  const ghostY = () => {
-    if (!currentPiece) return 0;
-    let y = currentPiece.position.y;
-    while (isValid(currentPiece.position.x, y + 1, currentPiece.shape)) y++;
-    return y;
-  };
+  // Shared flags to avoid worklet reading React state directly
+  const pausedSV = useSharedValue(paused ? 1 : 0);
+  const gameOverSV = useSharedValue(gameOver ? 1 : 0);
+  useEffect(() => { pausedSV.value = paused ? 1 : 0; }, [paused]);
+  useEffect(() => { gameOverSV.value = gameOver ? 1 : 0; }, [gameOver]);
+
+  // Gestures
+  const accX = useSharedValue(0);
+  const accY = useSharedValue(0);
+  const lastTX = useSharedValue(0);
+  const lastTY = useSharedValue(0);
+
+  const pan = Gesture.Pan()
+    .onBegin(() => {
+      accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0;
+    })
+    .onUpdate((e) => {
+      if (pausedSV.value || gameOverSV.value) return;
+      const dx = e.translationX - lastTX.value;
+      const dy = e.translationY - lastTY.value;
+      lastTX.value = e.translationX; lastTY.value = e.translationY;
+      accX.value += dx;
+      while (accX.value >= CELL) { runOnJS(movePiece)("right"); accX.value -= CELL; runOnJS(hapticLight)(); }
+      while (accX.value <= -CELL) { runOnJS(movePiece)("left"); accX.value += CELL; runOnJS(hapticLight)(); }
+      accY.value += dy;
+      while (accY.value >= CELL) { runOnJS(dropPiece)(); runOnJS(hapticLight)(); accY.value -= CELL; }
+    })
+    .onEnd(() => { accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0; });
+
+  const tap = Gesture.Tap().onEnd(() => {
+    if (pausedSV.value || gameOverSV.value) return; runOnJS(rotatePiece)(); runOnJS(hapticMedium)();
+  });
+  const flingUp = Gesture.Fling().direction(Directions.UP).onEnd(() => {
+    if (pausedSV.value || gameOverSV.value) return; runOnJS(hardDrop)(); runOnJS(hapticStrong)();
+  });
+  const flingDown = Gesture.Fling().direction(Directions.DOWN).onEnd(() => {
+    if (pausedSV.value || gameOverSV.value) return; runOnJS(dropPiece)(); runOnJS(hapticLight)();
+  });
+  const composedGesture = Gesture.Simultaneous(pan, tap, flingUp, flingDown);
 
   const renderAsciiGhost = () => {
     if (!currentPiece) return null;
-    const gy = ghostY();
+    const gy = ghostDropY(grid, currentPiece);
     if (gy <= currentPiece.position.y) return null;
     const items: any[] = [];
     for (let r = 0; r < currentPiece.shape.length; r++) {
@@ -275,14 +197,14 @@ export default function TetrisScreen() {
 
   const renderGhostClassic = () => {
     if (!currentPiece) return null;
-    const gy = ghostY();
+    const gy = ghostDropY(grid, currentPiece);
     if (gy <= currentPiece.position.y) return null;
     const items: any[] = [];
     for (let r = 0; r < currentPiece.shape.length; r++) {
       for (let c = 0; c < currentPiece.shape[r].length; c++) {
         if (currentPiece.shape[r][c]) {
           items.push(
-            <View key={`gc-${r}-${c}`} style={{ position: 'absolute', left: (currentPiece.position.x + c) * CELL, top: (gy + r) * CELL, width: CELL, height: CELL, borderWidth: StyleSheet.hairlineWidth, borderColor: TERMINAL_DARK_GREEN, opacity: 0.4 }} />
+            <View key={`gc-${r}-${c}`} style={{ position: "absolute", left: (currentPiece.position.x + c) * CELL, top: (gy + r) * CELL, width: CELL, height: CELL, borderWidth: StyleSheet.hairlineWidth, borderColor: TERMINAL_DARK_GREEN, opacity: 0.4 }} />
           );
         }
       }
@@ -345,14 +267,7 @@ export default function TetrisScreen() {
               key={`a-${y}-${x}`}
               style={[
                 styles.asciiGlyph,
-                {
-                  left: x * CELL,
-                  top: y * CELL,
-                  width: CELL,
-                  height: CELL,
-                  lineHeight: CELL,
-                  fontSize: Math.floor(CELL * 0.9),
-                },
+                { left: x * CELL, top: y * CELL, width: CELL, height: CELL, lineHeight: CELL, fontSize: Math.floor(CELL * 0.9) },
               ]}
               allowFontScaling={false}
             >
@@ -380,32 +295,17 @@ export default function TetrisScreen() {
     );
   };
 
-  const renderNextPiece = () => {
-    if (!nextPiece) return null;
-    const shape = PIECES[nextPiece].shape;
+  const renderMiniPiece = (type: keyof typeof PIECES, scale = 0.6) => {
+    const shape = PIECES[type].shape;
     if (asciiMode) {
-      const mini = Math.round(BLOCK_SIZE * 0.6);
-      const glyph = getGlyphForColor(PIECES[nextPiece].color);
+      const mini = Math.round(BLOCK_SIZE * scale);
+      const glyph = getGlyphForColor(PIECES[type].color);
       const items: any[] = [];
       for (let r = 0; r < shape.length; r++) {
         for (let c = 0; c < shape[r].length; c++) {
           if (shape[r][c]) {
             items.push(
-              <Text
-                key={`next-${r}-${c}`}
-                style={[
-                  styles.asciiGlyph,
-                  {
-                    left: c * mini,
-                    top: r * mini,
-                    width: mini,
-                    height: mini,
-                    lineHeight: mini,
-                    fontSize: Math.floor(mini * 0.9),
-                  },
-                ]}
-                allowFontScaling={false}
-              >
+              <Text key={`mini-${type}-${r}-${c}`} style={[styles.asciiGlyph, { left: c * mini, top: r * mini, width: mini, height: mini, lineHeight: mini, fontSize: Math.floor(mini * 0.9) }]} allowFontScaling={false}>
                 {glyph}
               </Text>
             );
@@ -415,21 +315,11 @@ export default function TetrisScreen() {
       return items;
     }
     const cells: any[] = [];
-    for (let row = 0; row < shape.length; row++) {
-      for (let col = 0; col < shape[row].length; col++) {
-        if (shape[row][col]) {
+    for (let r = 0; r < shape.length; r++) {
+      for (let c = 0; c < shape[r].length; c++) {
+        if (shape[r][c]) {
           cells.push(
-            <View
-              key={`next-${row}-${col}`}
-              style={[
-                styles.nextCell,
-                {
-                  backgroundColor: PIECES[nextPiece].color,
-                  left: col * (BLOCK_SIZE * 0.6),
-                  top: row * (BLOCK_SIZE * 0.6),
-                },
-              ]}
-            />
+            <View key={`mini-${type}-${r}-${c}`} style={[styles.nextCell, { backgroundColor: PIECES[type].color, left: c * (BLOCK_SIZE * scale), top: r * (BLOCK_SIZE * scale) }]} />
           );
         }
       }
@@ -437,82 +327,31 @@ export default function TetrisScreen() {
     return cells;
   };
 
-  // Haptics helpers (called from JS via runOnJS)
-  const hapticLight = () => { if (Platform.OS === "ios") Vibration.vibrate(8); };
-  const hapticMedium = () => { if (Platform.OS === "ios") Vibration.vibrate(10); };
-  const hapticStrong = () => { if (Platform.OS === "ios") Vibration.vibrate(50); };
+  const renderNextQueue = () => {
+    const show = nextQueue.slice(0, 5);
+    return (
+      <View style={{ gap: 10 }}>
+        <Text style={styles.nextTitle}>NEXT</Text>
+        {show.map((t, idx) => (
+          <View key={`q-${idx}-${t}`} style={[styles.nextPieceBox, { height: BLOCK_SIZE * 4 * 0.6 }]}>
+            {renderMiniPiece(t)}
+          </View>
+        ))}
+      </View>
+    );
+  };
 
-  // Shared flags to avoid worklet reading React state directly
-  const pausedSV = useSharedValue(paused ? 1 : 0);
-  const gameOverSV = useSharedValue(gameOver ? 1 : 0);
-  useEffect(() => { pausedSV.value = paused ? 1 : 0; }, [paused]);
-  useEffect(() => { gameOverSV.value = gameOver ? 1 : 0; }, [gameOver]);
-
-  // Gestures
-  const accX = useSharedValue(0);
-  const accY = useSharedValue(0);
-  const lastTX = useSharedValue(0);
-  const lastTY = useSharedValue(0);
-
-  const pan = Gesture.Pan()
-    .onBegin(() => {
-      accX.value = 0;
-      accY.value = 0;
-      lastTX.value = 0;
-      lastTY.value = 0;
-    })
-    .onUpdate((e) => {
-      if (pausedSV.value || gameOverSV.value) return;
-      const dx = e.translationX - lastTX.value;
-      const dy = e.translationY - lastTY.value;
-      lastTX.value = e.translationX;
-      lastTY.value = e.translationY;
-      accX.value += dx;
-      while (accX.value >= CELL) {
-        runOnJS(movePiece)("right");
-        accX.value -= CELL;
-        runOnJS(hapticLight)();
-      }
-      while (accX.value <= -CELL) {
-        runOnJS(movePiece)("left");
-        accX.value += CELL;
-        runOnJS(hapticLight)();
-      }
-      accY.value += dy;
-      while (accY.value >= CELL) {
-        runOnJS(dropPiece)();
-        runOnJS(hapticLight)();
-        accY.value -= CELL;
-      }
-    })
-    .onEnd(() => {
-      accX.value = 0;
-      accY.value = 0;
-      lastTX.value = 0;
-      lastTY.value = 0;
-    });
-
-  const tap = Gesture.Tap().onEnd(() => {
-    if (pausedSV.value || gameOverSV.value) return;
-    runOnJS(rotatePiece)();
-    runOnJS(hapticMedium)();
-  });
-  const flingUp = Gesture.Fling().direction(Directions.UP).onEnd(() => {
-    if (pausedSV.value || gameOverSV.value) return;
-    runOnJS(hardDrop)();
-    runOnJS(hapticStrong)();
-  });
-  const flingDown = Gesture.Fling().direction(Directions.DOWN).onEnd(() => {
-    if (pausedSV.value || gameOverSV.value) return;
-    runOnJS(dropPiece)();
-    runOnJS(hapticLight)();
-  });
-  const composedGesture = Gesture.Simultaneous(pan, tap, flingUp, flingDown);
-
-  const asciiFontSize = Math.floor(PLAY_WIDTH / (GRID_WIDTH * getCharAspect())); // legacy; not used in per-cell mode
+  const renderHold = () => {
+    return (
+      <View style={{ alignItems: "center", marginBottom: 20 }}>
+        <Text style={styles.nextTitle}>HOLD</Text>
+        <View style={styles.nextPieceBox}>{holdPiece ? renderMiniPiece(holdPiece) : null}</View>
+      </View>
+    );
+  };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top }] }>
       <View style={styles.header}>
         <Text style={styles.title}>TETRIS</Text>
         <View style={styles.stats}>
@@ -524,32 +363,30 @@ export default function TetrisScreen() {
 
       <View style={styles.gameArea}>
         <View style={styles.leftPanel}>
-          <View style={styles.nextPieceContainer}>
-            <Text style={styles.nextTitle}>NEXT</Text>
-            <View style={styles.nextPieceBox}>{renderNextPiece()}</View>
-          </View>
+          {renderHold()}
+          {renderNextQueue()}
         </View>
 
         <View style={styles.playArea}>
           <GestureDetector gesture={composedGesture}>
             <View style={[styles.grid, { width: PLAY_WIDTH, height: PLAY_HEIGHT }]}>
-               {asciiMode ? (
-                 <>
-                   {renderAsciiGhost()}
-                   {renderAsciiBoard()}
-                   <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-                     {renderGridLines()}
-                   </View>
-                 </>
-               ) : (
-                 <>
-                   {renderGrid()}
-                   <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-                     {renderGhostClassic()}
-                     {renderGridLines()}
-                   </View>
-                 </>
-               )}
+              {asciiMode ? (
+                <>
+                  {renderAsciiGhost()}
+                  {renderAsciiBoard()}
+                  <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+                    {renderGridLines()}
+                  </View>
+                </>
+              ) : (
+                <>
+                  {renderGrid()}
+                  <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+                    {renderGhostClassic()}
+                    {renderGridLines()}
+                  </View>
+                </>
+              )}
             </View>
           </GestureDetector>
         </View>
@@ -565,6 +402,10 @@ export default function TetrisScreen() {
 
           <Pressable style={styles.controlButton} onPress={toggleAsciiMode}>
             <Text style={styles.buttonText}>{asciiMode ? "ASCII ON" : "ASCII OFF"}</Text>
+          </Pressable>
+
+          <Pressable style={[styles.controlButton, { opacity: canHold ? 1 : 0.5 }]} onPress={holdSwap} disabled={!canHold}>
+            <Text style={styles.buttonText}>HOLD</Text>
           </Pressable>
         </View>
       </View>
@@ -592,7 +433,7 @@ export default function TetrisScreen() {
 
       <View style={styles.controls}>
         <View style={styles.controlRow}>
-          <Pressable style={styles.moveButton} onPress={() => handleMove("left")}> 
+          <Pressable style={styles.moveButton} onPress={() => handleMove("left")}>
             <Text style={styles.buttonText}>←</Text>
           </Pressable>
           <Pressable style={styles.moveButton} onPress={handleRotate}>
@@ -616,189 +457,34 @@ export default function TetrisScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: TERMINAL_BG,
-    alignItems: "center",
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: TERMINAL_GREEN,
-    marginBottom: 10,
-  },
-  stats: {
-    flexDirection: "row",
-    gap: 20,
-  },
-  statText: {
-    color: TERMINAL_GREEN,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  gameArea: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 20,
-  },
-  leftPanel: {
-    alignItems: "center",
-  },
-  nextPieceContainer: {
-    alignItems: "center",
-  },
-  nextTitle: {
-    color: TERMINAL_GREEN,
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  nextPieceBox: {
-    width: BLOCK_SIZE * 4 * 0.6,
-    height: BLOCK_SIZE * 4 * 0.6,
-    borderWidth: 2,
-    borderColor: TERMINAL_GREEN,
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  nextCell: {
-    position: "absolute",
-    width: BLOCK_SIZE * 0.6,
-    height: BLOCK_SIZE * 0.6,
-    borderWidth: 1,
-    borderColor: TERMINAL_DARK_GREEN,
-  },
-  playArea: {
-    alignItems: "center",
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    borderWidth: 2,
-    borderColor: TERMINAL_GREEN,
-    position: "relative",
-    overflow: "hidden",
-  },
-  cell: {
-    width: CELL,
-    height: CELL,
-  },
-  rightPanel: {
-    gap: 10,
-  },
-  controlButton: {
-    backgroundColor: TERMINAL_DARK_GREEN,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: TERMINAL_GREEN,
-  },
-  controls: {
-    position: "absolute",
-    bottom: 50,
-    gap: 15,
-  },
-  controlRow: {
-    flexDirection: "row",
-    gap: 15,
-    justifyContent: "center",
-  },
-  moveButton: {
-    backgroundColor: TERMINAL_DARK_GREEN,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: TERMINAL_GREEN,
-  },
-  dropButton: {
-    backgroundColor: TERMINAL_DARK_GREEN,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: TERMINAL_GREEN,
-  },
-  buttonText: {
-    color: TERMINAL_GREEN,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  gameOverOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 20,
-  },
-  gameOverText: {
-    color: TERMINAL_GREEN,
-    fontSize: 48,
-    fontWeight: "bold",
-  },
-  finalScore: {
-    color: TERMINAL_GREEN,
-    fontSize: 24,
-  },
-  restartButton: {
-    backgroundColor: TERMINAL_DARK_GREEN,
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: TERMINAL_GREEN,
-  },
-  asciiText: {
-    color: "#79F28A",
-    fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
-    textShadowColor: "#00FF00",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 6,
-  },
-  asciiTextSmall: {
-    color: "#79F28A",
-    fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
-    fontSize: Math.floor(BLOCK_SIZE * 0.6),
-    lineHeight: Math.floor(BLOCK_SIZE * 0.6 * 1.05),
-    textShadowColor: "#00FF00",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
-    textAlign: "center",
-  },
-  asciiGlyph: {
-    position: "absolute",
-    color: "#79F28A",
-    fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
-    textShadowColor: "#00FF00",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 6,
-    textAlign: "center",
-  },
-  gridLineV: {
-    position: "absolute",
-    top: 0,
-    width: StyleSheet.hairlineWidth,
-    backgroundColor: TERMINAL_DARK_GREEN,
-    opacity: 0.6,
-  },
-  gridLineH: {
-    position: "absolute",
-    left: 0,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: TERMINAL_DARK_GREEN,
-    opacity: 0.6,
-  },
+  container: { flex: 1, backgroundColor: TERMINAL_BG, alignItems: "center" },
+  header: { alignItems: "center", marginBottom: 20 },
+  title: { fontSize: 32, fontWeight: "bold", color: TERMINAL_GREEN, marginBottom: 10 },
+  stats: { flexDirection: "row", gap: 20 },
+  statText: { color: TERMINAL_GREEN, fontSize: 16, fontWeight: "bold" },
+  gameArea: { flexDirection: "row", alignItems: "flex-start", gap: 20 },
+  leftPanel: { alignItems: "center" },
+  nextPieceContainer: { alignItems: "center" },
+  nextTitle: { color: TERMINAL_GREEN, fontSize: 16, fontWeight: "bold", marginBottom: 10 },
+  nextPieceBox: { width: BLOCK_SIZE * 4 * 0.6, height: BLOCK_SIZE * 4 * 0.6, borderWidth: 2, borderColor: TERMINAL_GREEN, position: "relative", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  nextCell: { position: "absolute", width: BLOCK_SIZE * 0.6, height: BLOCK_SIZE * 0.6, borderWidth: 1, borderColor: TERMINAL_DARK_GREEN },
+  playArea: { alignItems: "center" },
+  grid: { flexDirection: "row", flexWrap: "wrap", borderWidth: 2, borderColor: TERMINAL_GREEN, position: "relative", overflow: "hidden" },
+  cell: { width: CELL, height: CELL },
+  rightPanel: { gap: 10 },
+  controlButton: { backgroundColor: TERMINAL_DARK_GREEN, paddingHorizontal: 15, paddingVertical: 10, borderRadius: 5, borderWidth: 1, borderColor: TERMINAL_GREEN },
+  controls: { position: "absolute", bottom: 50, gap: 15 },
+  controlRow: { flexDirection: "row", gap: 15, justifyContent: "center" },
+  moveButton: { backgroundColor: TERMINAL_DARK_GREEN, width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: TERMINAL_GREEN },
+  dropButton: { backgroundColor: TERMINAL_DARK_GREEN, paddingHorizontal: 20, paddingVertical: 15, borderRadius: 10, borderWidth: 2, borderColor: TERMINAL_GREEN },
+  buttonText: { color: TERMINAL_GREEN, fontSize: 16, fontWeight: "bold" },
+  gameOverOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0, 0, 0, 0.8)", justifyContent: "center", alignItems: "center", gap: 20 },
+  gameOverText: { color: TERMINAL_GREEN, fontSize: 48, fontWeight: "bold" },
+  finalScore: { color: TERMINAL_GREEN, fontSize: 24 },
+  restartButton: { backgroundColor: TERMINAL_DARK_GREEN, paddingHorizontal: 30, paddingVertical: 15, borderRadius: 10, borderWidth: 2, borderColor: TERMINAL_GREEN },
+  asciiText: { color: "#79F28A", fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }), textShadowColor: "#00FF00", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6 },
+  asciiTextSmall: { color: "#79F28A", fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }), fontSize: Math.floor(BLOCK_SIZE * 0.6), lineHeight: Math.floor(BLOCK_SIZE * 0.6 * 1.05), textShadowColor: "#00FF00", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 4, textAlign: "center" },
+  asciiGlyph: { position: "absolute", color: "#79F28A", fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }), textShadowColor: "#00FF00", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6, textAlign: "center" },
+  gridLineV: { position: "absolute", top: 0, width: StyleSheet.hairlineWidth, backgroundColor: TERMINAL_DARK_GREEN, opacity: 0.6 },
+  gridLineH: { position: "absolute", left: 0, height: StyleSheet.hairlineWidth, backgroundColor: TERMINAL_DARK_GREEN, opacity: 0.6 },
 });
