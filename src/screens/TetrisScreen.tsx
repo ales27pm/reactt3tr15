@@ -18,6 +18,7 @@ import { ghostDropY } from "../state/engine";
 import { getGlyphForColor } from "../utils/ascii";
 import MinimalModal from "../components/MinimalModal";
 import SlashTrail, { Point as SlashPoint } from "../components/SlashTrail";
+import { playSfx, setSfxEnabled } from "../utils/sfx";
 
 const { width } = Dimensions.get("window");
 const BLOCK_SIZE = Math.min(width * 0.05, 20);
@@ -121,28 +122,31 @@ export default function TetrisScreen() {
       if (!gameOver && !paused) {
         movePiece(direction);
         if (Platform.OS === "ios") Vibration.vibrate(10);
+        if (enableSfx) playSfx("move");
       }
     },
-    [gameOver, paused, movePiece]
+    [gameOver, paused, movePiece, enableSfx]
   );
 
   const handleRotate = useCallback(() => {
     if (!gameOver && !paused) {
       rotatePiece();
       if (Platform.OS === "ios") Vibration.vibrate(10);
+      if (enableSfx) playSfx("rotate");
     }
-  }, [gameOver, paused, rotatePiece]);
+  }, [gameOver, paused, rotatePiece, enableSfx]);
 
   const handleDrop = useCallback(() => {
-    if (!gameOver && !paused) dropPiece();
-  }, [gameOver, paused, dropPiece]);
+    if (!gameOver && !paused) { dropPiece(); if (enableSfx) playSfx("soft"); }
+  }, [gameOver, paused, dropPiece, enableSfx]);
 
   const handleHardDrop = useCallback(() => {
     if (!gameOver && !paused) {
       hardDrop();
       if (Platform.OS === "ios") Vibration.vibrate(50);
+      if (enableSfx) playSfx("hard");
     }
-  }, [gameOver, paused, hardDrop]);
+  }, [gameOver, paused, hardDrop, enableSfx]);
 
   // Haptics helpers (called from JS via runOnJS)
   const hapticLight = () => { if (enableHaptics && Platform.OS === "ios") Vibration.vibrate(8); };
@@ -157,18 +161,22 @@ export default function TetrisScreen() {
   const borderPulse = useSharedValue(0);
   useEffect(() => { pausedSV.value = paused ? 1 : 0; }, [paused]);
   useEffect(() => { gameOverSV.value = gameOver ? 1 : 0; }, [gameOver]);
+  useEffect(() => { setSfxEnabled(enableSfx); }, [enableSfx]);
   useEffect(() => {
     if (lastClearedRows && lastClearedRows.length > 0) {
       lineFlash.value = 1;
       lineFlash.value = withTiming(0, { duration: 220, easing: Easing.out(Easing.quad) });
+      if (enableSfx) playSfx("line");
     }
-  }, [lastClearedRows]);
+  }, [lastClearedRows, enableSfx]);
   useEffect(() => {
     if (lastLockAt) {
       borderPulse.value = 1;
       borderPulse.value = withTiming(0, { duration: 180, easing: Easing.out(Easing.cubic) });
+      if (enableSfx) playSfx("lock");
     }
-  }, [lastLockAt]);
+  }, [lastLockAt, enableSfx]);
+  useEffect(() => { if (gameOver && enableSfx) playSfx("gameover"); }, [gameOver, enableSfx]);
 
   // Slash trail state and registration
   const [isSlashActive, setIsSlashActive] = useState(false);
@@ -202,17 +210,17 @@ export default function TetrisScreen() {
       const dy = e.translationY - lastTY.value;
       lastTX.value = e.translationX; lastTY.value = e.translationY;
       accX.value += dx;
-      while (accX.value >= CELL) { runOnJS(movePiece)("right"); accX.value -= CELL; runOnJS(hapticLight)(); }
-      while (accX.value <= -CELL) { runOnJS(movePiece)("left"); accX.value += CELL; runOnJS(hapticLight)(); }
+      while (accX.value >= CELL) { runOnJS(movePiece)("right"); accX.value -= CELL; runOnJS(hapticLight)(); runOnJS(playSfx)("move"); }
+      while (accX.value <= -CELL) { runOnJS(movePiece)("left"); accX.value += CELL; runOnJS(hapticLight)(); runOnJS(playSfx)("move"); }
       accY.value += dy;
-      while (accY.value >= CELL) { runOnJS(dropPiece)(); runOnJS(hapticLight)(); accY.value -= CELL; }
+      while (accY.value >= CELL) { runOnJS(dropPiece)(); runOnJS(hapticLight)(); runOnJS(playSfx)("soft"); accY.value -= CELL; }
     })
     .onEnd(() => { accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0; slashActiveSV.value = 0; runOnJS(stopSlash)(); });
 
   const tap = Gesture.Tap()
     .maxDistance(8)
     .onEnd(() => {
-      if (pausedSV.value || gameOverSV.value || slashActiveSV.value) return; runOnJS(rotatePiece)(); runOnJS(hapticMedium)();
+      if (pausedSV.value || gameOverSV.value || slashActiveSV.value) return; runOnJS(rotatePiece)(); runOnJS(hapticMedium)(); runOnJS(playSfx)("rotate");
     });
   const flingUp = Gesture.Fling().direction(Directions.UP).onEnd(() => {
     if (pausedSV.value || gameOverSV.value) return; runOnJS(hardDrop)(); runOnJS(hapticStrong)();
@@ -476,7 +484,7 @@ export default function TetrisScreen() {
             <Text style={styles.buttonText}>{asciiMode ? "ASCII ON" : "ASCII OFF"}</Text>
           </Pressable>
 
-          <Pressable style={({pressed}) => [styles.controlButton, { opacity: canHold ? 1 : 0.5 }, pressed && { opacity: 0.85 }]} onPress={holdSwap} disabled={!canHold}>
+          <Pressable style={({pressed}) => [styles.controlButton, { opacity: canHold ? 1 : 0.5 }, pressed && { opacity: 0.85 }]} onPress={() => { holdSwap(); if (enableSfx) playSfx("hold"); }} disabled={!canHold}>
             <Text style={styles.buttonText}>HOLD</Text>
           </Pressable>
 
