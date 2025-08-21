@@ -148,6 +148,7 @@ interface TetrisState {
   gameOver: boolean;
   paused: boolean;
   highScore: number;
+  asciiMode: boolean;
 }
 
 interface TetrisActions {
@@ -158,6 +159,7 @@ interface TetrisActions {
   hardDrop: () => void;
   pauseGame: () => void;
   resetGame: () => void;
+  toggleAsciiMode: () => void;
 }
 
 const createEmptyGrid = (): (string | null)[][] => {
@@ -320,6 +322,7 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
       gameOver: false,
       paused: false,
       highScore: 0,
+      asciiMode: true,
 
       initializeGame: () => {
         const nextPiece = getRandomPiece();
@@ -450,11 +453,15 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
       resetGame: () => {
         get().initializeGame();
       },
+
+      toggleAsciiMode: () => {
+        set(state => ({ asciiMode: !state.asciiMode }));
+      },
     }),
     {
       name: 'tetris-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({ highScore: state.highScore }),
+      partialize: (state) => ({ highScore: state.highScore, asciiMode: state.asciiMode }),
     }
   )
 );

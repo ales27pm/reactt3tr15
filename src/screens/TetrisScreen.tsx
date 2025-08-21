@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTetrisStore } from '../state/tetrisStore';
+import { composeAsciiGrid, composeAsciiPiece } from "../utils/ascii";
 import MinimalModal from "../components/MinimalModal";
 
 const { width } = Dimensions.get('window');
@@ -159,13 +160,15 @@ export default function TetrisScreen() {
     lines,
     gameOver,
     paused,
+    asciiMode,
     initializeGame,
     movePiece,
     rotatePiece,
     dropPiece,
     hardDrop,
     pauseGame,
-    resetGame
+    resetGame,
+    toggleAsciiMode,
   } = useTetrisStore();
 
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
@@ -266,10 +269,14 @@ export default function TetrisScreen() {
 
   const renderNextPiece = () => {
     if (!nextPiece) return null;
-    
-    const cells = [];
     const shape = PIECES[nextPiece].shape;
-    
+    if (asciiMode) {
+      const text = composeAsciiPiece(shape, PIECES[nextPiece].color);
+      return (
+        <Text style={styles.asciiTextSmall}>{text}</Text>
+      );
+    }
+    const cells: any[] = [];
     for (let row = 0; row < shape.length; row++) {
       for (let col = 0; col < shape[row].length; col++) {
         if (shape[row][col]) {
@@ -315,7 +322,13 @@ export default function TetrisScreen() {
 
         <View style={styles.playArea}>
           <View style={[styles.grid, { width: PLAY_WIDTH, height: PLAY_HEIGHT }]}>
-            {renderGrid()}
+            {asciiMode ? (
+              <Text style={[styles.asciiText, { fontSize: Math.floor(PLAY_WIDTH / GRID_WIDTH), lineHeight: Math.floor(PLAY_WIDTH / GRID_WIDTH) * 1.05 }]}>
+                {composeAsciiGrid(grid as any, currentPiece as any)}
+              </Text>
+            ) : (
+              renderGrid()
+            )}
           </View>
         </View>
 
@@ -333,12 +346,12 @@ export default function TetrisScreen() {
           >
             <Text style={styles.buttonText}>RESET</Text>
           </Pressable>
-          
+
           <Pressable
             style={styles.controlButton}
-            onPress={() => setDemoErrorVisible(true)}
+            onPress={toggleAsciiMode}
           >
-            <Text style={styles.buttonText}>TEST ERROR</Text>
+            <Text style={styles.buttonText}>{asciiMode ? "ASCII ON" : "ASCII OFF"}</Text>
           </Pressable>
         </View>
       </View>
@@ -549,5 +562,21 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 2,
     borderColor: TERMINAL_GREEN,
+  },
+  asciiText: {
+    color: '#79F28A',
+    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+    textShadowColor: '#00FF00',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+  },
+  asciiTextSmall: {
+    color: '#79F28A',
+    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+    fontSize: Math.floor((BLOCK_SIZE * 0.6)),
+    lineHeight: Math.floor((BLOCK_SIZE * 0.6) * 1.05),
+    textShadowColor: '#00FF00',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
   },
 });
