@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, Directions } from "react-native-gesture-handler";
-import { runOnJS, useSharedValue } from "react-native-reanimated";
+import Animated, { runOnJS, useSharedValue, useAnimatedStyle, withTiming, Easing } from "react-native-reanimated";
 import { useTetrisStore } from "../state/tetrisStore";
 import { PIECES, GRID_WIDTH, GRID_HEIGHT } from "../state/tetrominoes";
 import { ghostDropY } from "../state/engine";
@@ -52,6 +52,10 @@ export default function TetrisScreen() {
   const enableHaptics = useTetrisStore((s) => s.enableHaptics);
   const slashTrailEnabled = useTetrisStore((s) => s.slashTrailEnabled);
   const showHints = useTetrisStore((s) => s.showHints);
+  const lastClearedRows = useTetrisStore((s) => s.lastClearedRows);
+  const lastLockAt = useTetrisStore((s) => s.lastLockAt);
+  const enableSfx = useTetrisStore((s) => s.enableSfx);
+
 
   const initializeGame = useTetrisStore((s) => s.initializeGame);
   const movePiece = useTetrisStore((s) => s.movePiece);
@@ -67,6 +71,7 @@ export default function TetrisScreen() {
   const toggleGhost = useTetrisStore((s) => s.toggleGhost);
   const toggleHaptics = useTetrisStore((s) => s.toggleHaptics);
   const toggleSlashTrail = useTetrisStore((s) => s.toggleSlashTrail);
+  const toggleSfx = useTetrisStore((s) => s.toggleSfx);
   const hideHints = useTetrisStore((s) => s.hideHints);
 
   // Start
@@ -148,8 +153,22 @@ export default function TetrisScreen() {
   const pausedSV = useSharedValue(paused ? 1 : 0);
   const gameOverSV = useSharedValue(gameOver ? 1 : 0);
   const slashActiveSV = useSharedValue(0);
+  const lineFlash = useSharedValue(0);
+  const borderPulse = useSharedValue(0);
   useEffect(() => { pausedSV.value = paused ? 1 : 0; }, [paused]);
   useEffect(() => { gameOverSV.value = gameOver ? 1 : 0; }, [gameOver]);
+  useEffect(() => {
+    if (lastClearedRows && lastClearedRows.length > 0) {
+      lineFlash.value = 1;
+      lineFlash.value = withTiming(0, { duration: 220, easing: Easing.out(Easing.quad) });
+    }
+  }, [lastClearedRows]);
+  useEffect(() => {
+    if (lastLockAt) {
+      borderPulse.value = 1;
+      borderPulse.value = withTiming(0, { duration: 180, easing: Easing.out(Easing.cubic) });
+    }
+  }, [lastLockAt]);
 
   // Slash trail state and registration
   const [isSlashActive, setIsSlashActive] = useState(false);
@@ -205,6 +224,15 @@ export default function TetrisScreen() {
   tap.requireExternalGestureToFail(pan, flingUp, flingDown);
 
   const composedGesture = Gesture.Exclusive(pan, flingUp, flingDown, tap);
+
+  const gridAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      shadowRadius: 8 + borderPulse.value * 12,
+      shadowOpacity: 0.3 + borderPulse.value * 0.4,
+    } as const;
+  });
+
+  const lineFlashStyle = useAnimatedStyle(() => ({ opacity: lineFlash.value * 0.7 }));
 
   const renderAsciiGhost = () => {
     if (!currentPiece) return null;
@@ -403,7 +431,7 @@ export default function TetrisScreen() {
 
         <View style={styles.playArea}>
           <GestureDetector gesture={composedGesture}>
-            <View style={[styles.grid, { width: PLAY_WIDTH, height: PLAY_HEIGHT }] }>
+            <Animated.View style={[styles.grid, gridAnimatedStyle, { width: PLAY_WIDTH, height: PLAY_HEIGHT }] }>
               {asciiMode ? (
                 <>
                   {showGhost && renderAsciiGhost()}
@@ -421,6 +449,9 @@ export default function TetrisScreen() {
                   </View>
                 </>
               )}
+              {lastClearedRows?.map((r) => (
+                <Animated.View key={`clr-${r}`} style={[{ position: "absolute", left: 0, top: r * CELL, width: PLAY_WIDTH, height: CELL, backgroundColor: TERMINAL_GREEN }, lineFlashStyle]} />
+              ))}
               {slashTrailEnabled && (
                 <SlashTrail
                   isActive={isSlashActive}
@@ -428,7 +459,7 @@ export default function TetrisScreen() {
                   registerAddPoint={registerAddPoint}
                 />
               )}
-            </View>
+            </Animated.View>
           </GestureDetector>
         </View>
 
@@ -480,6 +511,7 @@ export default function TetrisScreen() {
             <Pressable style={styles.settingRow} onPress={toggleGhost}><Text style={styles.settingText}>Ghost: {showGhost ? "On" : "Off"}</Text></Pressable>
             <Pressable style={styles.settingRow} onPress={toggleHaptics}><Text style={styles.settingText}>Haptics: {enableHaptics ? "On" : "Off"}</Text></Pressable>
             <Pressable style={styles.settingRow} onPress={toggleSlashTrail}><Text style={styles.settingText}>Slash trail: {slashTrailEnabled ? "On" : "Off"}</Text></Pressable>
+            <Pressable style={styles.settingRow} onPress={toggleSfx}><Text style={styles.settingText}>SFX: {enableSfx ? "On" : "Off"}</Text></Pressable>
             <Pressable style={[styles.dropButton, { marginTop: 12 }]} onPress={() => setSettingsVisible(false)}><Text style={styles.buttonText}>Close</Text></Pressable>
           </View>
         </View>

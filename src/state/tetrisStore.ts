@@ -49,10 +49,13 @@ interface TetrisState {
   combo: number; // successive line clears
   backToBack: boolean; // last clear was Tetris
   lockExpireAt: number | null;
+  lastClearedRows: number[] | null;
+  lastLockAt: number | null;
   // settings
   showGridLines: boolean;
   showGhost: boolean;
   enableHaptics: boolean;
+  enableSfx: boolean;
   slashTrailEnabled: boolean;
   showHints: boolean;
 }
@@ -72,6 +75,7 @@ interface TetrisActions {
   toggleGridLines: () => void;
   toggleGhost: () => void;
   toggleHaptics: () => void;
+  toggleSfx: () => void;
   toggleSlashTrail: () => void;
   hideHints: () => void;
 }
@@ -94,10 +98,13 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
       combo: 0,
       backToBack: false,
       lockExpireAt: null,
+      lastClearedRows: null,
+      lastLockAt: null,
       // settings defaults
       showGridLines: true,
       showGhost: true,
       enableHaptics: true,
+      enableSfx: false,
       slashTrailEnabled: true,
       showHints: true,
 
@@ -119,6 +126,8 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
           combo: 0,
           backToBack: false,
           lockExpireAt: null,
+          lastClearedRows: null,
+          lastLockAt: null,
         });
       },
 
@@ -220,6 +229,7 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
       toggleGridLines: () => set((s) => ({ showGridLines: !s.showGridLines })),
       toggleGhost: () => set((s) => ({ showGhost: !s.showGhost })),
       toggleHaptics: () => set((s) => ({ enableHaptics: !s.enableHaptics })),
+      toggleSfx: () => set((s) => ({ enableSfx: !s.enableSfx })),
       toggleSlashTrail: () => set((s) => ({ slashTrailEnabled: !s.slashTrailEnabled })),
       hideHints: () => set(() => ({ showHints: false })),
     }),
@@ -232,6 +242,7 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
         showGridLines: state.showGridLines,
         showGhost: state.showGhost,
         enableHaptics: state.enableHaptics,
+        enableSfx: state.enableSfx,
         slashTrailEnabled: state.slashTrailEnabled,
         showHints: state.showHints,
       }),
@@ -244,7 +255,7 @@ function lockAndSpawn() {
   const { grid, currentPiece, lines, level, score, highScore, nextQueue } = useTetrisStore.getState();
   if (!currentPiece) return;
   const placed = placePiece(grid, currentPiece);
-  const { newGrid, linesCleared } = clearLines(placed);
+  const { newGrid, linesCleared, clearedRows } = clearLines(placed);
 
   // scoring
   let add = calculateScore(linesCleared, level);
@@ -275,6 +286,8 @@ function lockAndSpawn() {
     highScore: Math.max(highScore, score + add),
     canHold: true,
     lockExpireAt: null,
+    lastClearedRows: linesCleared > 0 ? clearedRows : null,
+    lastLockAt: Date.now(),
     combo,
     backToBack: b2b,
     gameOver: over,

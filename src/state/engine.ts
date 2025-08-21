@@ -79,13 +79,13 @@ export const placePiece = (grid: Grid, piece: CurrentPiece): Grid => {
   return newGrid;
 };
 
-export const clearLines = (grid: Grid): { newGrid: Grid; linesCleared: number } => {
-  const newGrid: Grid = [] as any; let linesCleared = 0;
+export const clearLines = (grid: Grid): { newGrid: Grid; linesCleared: number; clearedRows: number[] } => {
+  const newGrid: Grid = [] as any; let linesCleared = 0; const clearedRows: number[] = [];
   for (let r = 0; r < GRID_HEIGHT; r++) {
-    if (grid[r].every(cell => cell !== null)) linesCleared++; else newGrid.push([...grid[r]]);
+    if (grid[r].every(cell => cell !== null)) { linesCleared++; clearedRows.push(r); } else newGrid.push([...grid[r]]);
   }
   while (newGrid.length < GRID_HEIGHT) newGrid.unshift(Array(GRID_WIDTH).fill(null));
-  return { newGrid, linesCleared };
+  return { newGrid, linesCleared, clearedRows };
 };
 
 export const calculateScore = (linesCleared: number, level: number): number => {
