@@ -17,6 +17,7 @@ import { PIECES, GRID_WIDTH, GRID_HEIGHT } from "../state/tetrominoes";
 import { ghostDropY } from "../state/engine";
 import { getGlyphForColor } from "../utils/ascii";
 import MinimalModal from "../components/MinimalModal";
+import SlashTrail, { Point as SlashPoint } from "../components/SlashTrail";
 
 const { width } = Dimensions.get("window");
 const BLOCK_SIZE = Math.min(width * 0.05, 20);
@@ -138,6 +139,15 @@ export default function TetrisScreen() {
   useEffect(() => { pausedSV.value = paused ? 1 : 0; }, [paused]);
   useEffect(() => { gameOverSV.value = gameOver ? 1 : 0; }, [gameOver]);
 
+  // Slash trail state and registration
+  const [isSlashActive, setIsSlashActive] = useState(false);
+  const slashInitialPoint = useRef<SlashPoint | null>(null);
+  const addSlashPointRef = useRef<((p: SlashPoint) => void) | null>(null);
+  const registerAddPoint = useCallback((fn: (p: SlashPoint) => void) => { addSlashPointRef.current = fn; }, []);
+  const startSlash = useCallback((p: SlashPoint) => { setIsSlashActive(true); slashInitialPoint.current = p; }, []);
+  const stopSlash = useCallback(() => { setIsSlashActive(false); slashInitialPoint.current = null; }, []);
+  const addSlashPointJS = useCallback((p: SlashPoint) => { addSlashPointRef.current?.(p); }, []);
+
   // Gestures
   const accX = useSharedValue(0);
   const accY = useSharedValue(0);
@@ -145,11 +155,15 @@ export default function TetrisScreen() {
   const lastTY = useSharedValue(0);
 
   const pan = Gesture.Pan()
-    .onBegin(() => {
+    .onBegin((e) => {
+      runOnJS(startSlash)({ x: e.x, y: e.y, timestamp: Date.now() });
       accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0;
     })
     .onUpdate((e) => {
       if (pausedSV.value || gameOverSV.value) return;
+      // slash trail
+      runOnJS(addSlashPointJS)({ x: e.x, y: e.y, timestamp: Date.now() });
+      // movement
       const dx = e.translationX - lastTX.value;
       const dy = e.translationY - lastTY.value;
       lastTX.value = e.translationX; lastTY.value = e.translationY;
@@ -159,7 +173,7 @@ export default function TetrisScreen() {
       accY.value += dy;
       while (accY.value >= CELL) { runOnJS(dropPiece)(); runOnJS(hapticLight)(); accY.value -= CELL; }
     })
-    .onEnd(() => { accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0; });
+    .onEnd(() => { accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0; runOnJS(stopSlash)(); });
 
   const tap = Gesture.Tap().onEnd(() => {
     if (pausedSV.value || gameOverSV.value) return; runOnJS(rotatePiece)(); runOnJS(hapticMedium)();
@@ -387,6 +401,11 @@ export default function TetrisScreen() {
                   </View>
                 </>
               )}
+              <SlashTrail
+                isActive={isSlashActive}
+                initialPoint={slashInitialPoint.current ?? undefined}
+                registerAddPoint={registerAddPoint}
+              />
             </View>
           </GestureDetector>
         </View>
