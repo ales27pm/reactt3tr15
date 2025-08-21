@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, Directions } from "react-native-gesture-handler";
 import { runOnJS, useSharedValue } from "react-native-reanimated";
 import { useTetrisStore } from "../state/tetrisStore";
-import { composeAsciiGrid, composeAsciiPiece, getCharAspect } from "../utils/ascii";
+import { composeAsciiGrid, composeAsciiPiece, getCharAspect, getGlyphForColor } from "../utils/ascii";
 import MinimalModal from "../components/MinimalModal";
 
 const { width } = Dimensions.get("window");
@@ -260,6 +260,47 @@ export default function TetrisScreen() {
     return cells;
   };
 
+  const renderAsciiBoard = () => {
+    const items: any[] = [];
+    for (let y = 0; y < GRID_HEIGHT; y++) {
+      for (let x = 0; x < GRID_WIDTH; x++) {
+        let glyphColor: string | null = grid[y]?.[x] || null;
+        if (
+          currentPiece &&
+          y >= currentPiece.position.y &&
+          y < currentPiece.position.y + currentPiece.shape.length &&
+          x >= currentPiece.position.x &&
+          x < currentPiece.position.x + currentPiece.shape[0].length &&
+          currentPiece.shape[y - currentPiece.position.y]?.[x - currentPiece.position.x]
+        ) {
+          glyphColor = currentPiece.color;
+        }
+        if (glyphColor) {
+          items.push(
+            <Text
+              key={`a-${y}-${x}`}
+              style={[
+                styles.asciiGlyph,
+                {
+                  left: x * CELL,
+                  top: y * CELL,
+                  width: CELL,
+                  height: CELL,
+                  lineHeight: CELL,
+                  fontSize: Math.floor(CELL * 0.9),
+                },
+              ]}
+              allowFontScaling={false}
+            >
+              {getGlyphForColor(glyphColor)}
+            </Text>
+          );
+        }
+      }
+    }
+    return items;
+  };
+
   const renderGridLines = () => {
     const linesV = Array.from({ length: GRID_WIDTH - 1 }).map((_, i) => (
       <View key={`v-${i + 1}`} style={[styles.gridLineV, { left: (i + 1) * CELL, height: PLAY_HEIGHT }]} />
@@ -279,19 +320,35 @@ export default function TetrisScreen() {
     if (!nextPiece) return null;
     const shape = PIECES[nextPiece].shape;
     if (asciiMode) {
-      const text = composeAsciiPiece(shape, PIECES[nextPiece].color);
-      return (
-        <Text
-          style={[
-            styles.asciiTextSmall,
-            { width: "100%", height: "100%", textAlign: "left", letterSpacing: Platform.OS === "android" ? -0.25 : 0 },
-          ]}
-          allowFontScaling={false}
-          numberOfLines={PIECES[nextPiece].shape.length}
-        >
-          {text}
-        </Text>
-      );
+      const mini = Math.round(BLOCK_SIZE * 0.6);
+      const glyph = getGlyphForColor(PIECES[nextPiece].color);
+      const items: any[] = [];
+      for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[r].length; c++) {
+          if (shape[r][c]) {
+            items.push(
+              <Text
+                key={`next-${r}-${c}`}
+                style={[
+                  styles.asciiGlyph,
+                  {
+                    left: c * mini,
+                    top: r * mini,
+                    width: mini,
+                    height: mini,
+                    lineHeight: mini,
+                    fontSize: Math.floor(mini * 0.9),
+                  },
+                ]}
+                allowFontScaling={false}
+              >
+                {glyph}
+              </Text>
+            );
+          }
+        }
+      }
+      return items;
     }
     const cells: any[] = [];
     for (let row = 0; row < shape.length; row++) {
@@ -388,7 +445,7 @@ export default function TetrisScreen() {
   });
   const composedGesture = Gesture.Simultaneous(pan, tap, flingUp, flingDown);
 
-  const asciiFontSize = Math.floor(PLAY_WIDTH / (GRID_WIDTH * getCharAspect()));
+  const asciiFontSize = Math.floor(PLAY_WIDTH / (GRID_WIDTH * getCharAspect())); // legacy; not used in per-cell mode
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -413,23 +470,12 @@ export default function TetrisScreen() {
           <GestureDetector gesture={composedGesture}>
             <View style={[styles.grid, { width: PLAY_WIDTH, height: PLAY_HEIGHT }]}>
               {asciiMode ? (
-                <Text
-                  style={[
-                    styles.asciiText,
-                    {
-                      fontSize: asciiFontSize,
-                      lineHeight: CELL,
-                      width: "100%",
-                      height: "100%",
-                      textAlign: "left",
-                      letterSpacing: Platform.OS === "android" ? -0.25 : 0,
-                    },
-                  ]}
-                  allowFontScaling={false}
-                  numberOfLines={GRID_HEIGHT}
-                >
-                  {composeAsciiGrid(grid as any, currentPiece as any)}
-                </Text>
+                <>
+                  {renderAsciiBoard()}
+                  <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+                    {renderGridLines()}
+                  </View>
+                </>
               ) : (
                 <>
                   {renderGrid()}
@@ -664,6 +710,15 @@ const styles = StyleSheet.create({
     textShadowColor: "#00FF00",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 4,
+    textAlign: "center",
+  },
+  asciiGlyph: {
+    position: "absolute",
+    color: "#79F28A",
+    fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
+    textShadowColor: "#00FF00",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
     textAlign: "center",
   },
   gridLineV: {

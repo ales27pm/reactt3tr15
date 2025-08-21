@@ -15,9 +15,14 @@ const COLOR_TO_CHAR: Record<string, string> = {
   "#0000FF": "#", // J
   "#FFA500": "+", // L
   "#FFFF00": "*", // O
-  "#00FF00": "█", // S
+  "#00FF00": "x", // S (fixed-width)
   "#800080": "%", // T
   "#FF0000": "@", // Z
+};
+
+export const getGlyphForColor = (color?: string | null) => {
+  if (!color) return " ";
+  return COLOR_TO_CHAR[color] || "#";
 };
 
 const charForColor = (color?: string | null) => {
