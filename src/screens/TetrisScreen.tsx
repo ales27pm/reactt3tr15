@@ -305,6 +305,17 @@ export default function TetrisScreen() {
     return cells;
   };
 
+  // Haptics helpers (called from JS via runOnJS)
+  const hapticLight = () => { if (Platform.OS === "ios") Vibration.vibrate(8); };
+  const hapticMedium = () => { if (Platform.OS === "ios") Vibration.vibrate(10); };
+  const hapticStrong = () => { if (Platform.OS === "ios") Vibration.vibrate(50); };
+
+  // Shared flags to avoid worklet reading React state directly
+  const pausedSV = useSharedValue(paused ? 1 : 0);
+  const gameOverSV = useSharedValue(gameOver ? 1 : 0);
+  useEffect(() => { pausedSV.value = paused ? 1 : 0; }, [paused]);
+  useEffect(() => { gameOverSV.value = gameOver ? 1 : 0; }, [gameOver]);
+
   // Gestures
   const accX = useSharedValue(0);
   const accY = useSharedValue(0);
@@ -319,6 +330,7 @@ export default function TetrisScreen() {
       lastTY.value = 0;
     })
     .onUpdate((e) => {
+      if (pausedSV.value || gameOverSV.value) return;
       const dx = e.translationX - lastTX.value;
       const dy = e.translationY - lastTY.value;
       lastTX.value = e.translationX;
@@ -327,16 +339,17 @@ export default function TetrisScreen() {
       while (accX.value >= CELL) {
         runOnJS(movePiece)("right");
         accX.value -= CELL;
-        if (Platform.OS === "ios") Vibration.vibrate(8);
+        runOnJS(hapticLight)();
       }
       while (accX.value <= -CELL) {
         runOnJS(movePiece)("left");
         accX.value += CELL;
-        if (Platform.OS === "ios") Vibration.vibrate(8);
+        runOnJS(hapticLight)();
       }
       accY.value += dy;
       while (accY.value >= CELL) {
         runOnJS(dropPiece)();
+        runOnJS(hapticLight)();
         accY.value -= CELL;
       }
     })
@@ -348,15 +361,19 @@ export default function TetrisScreen() {
     });
 
   const tap = Gesture.Tap().onEnd(() => {
+    if (pausedSV.value || gameOverSV.value) return;
     runOnJS(rotatePiece)();
-    if (Platform.OS === "ios") Vibration.vibrate(10);
+    runOnJS(hapticMedium)();
   });
   const flingUp = Gesture.Fling().direction(Directions.UP).onEnd(() => {
+    if (pausedSV.value || gameOverSV.value) return;
     runOnJS(hardDrop)();
-    if (Platform.OS === "ios") Vibration.vibrate(50);
+    runOnJS(hapticStrong)();
   });
   const flingDown = Gesture.Fling().direction(Directions.DOWN).onEnd(() => {
+    if (pausedSV.value || gameOverSV.value) return;
     runOnJS(dropPiece)();
+    runOnJS(hapticLight)();
   });
   const composedGesture = Gesture.Simultaneous(pan, tap, flingUp, flingDown);
 
