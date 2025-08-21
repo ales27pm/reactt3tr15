@@ -1,3 +1,5 @@
+export const CHAR_ASPECT = 0.6; // average mono char width / fontSize
+
 type SimplePiece = {
   shape: number[][];
   position: { x: number; y: number };

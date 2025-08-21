@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -6,151 +6,154 @@ import {
   Dimensions,
   Pressable,
   Vibration,
-  Platform
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTetrisStore } from '../state/tetrisStore';
-import { composeAsciiGrid, composeAsciiPiece } from "../utils/ascii";
+  Platform,
+  PixelRatio,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Gesture, GestureDetector, Directions } from "react-native-gesture-handler";
+import { runOnJS, useSharedValue } from "react-native-reanimated";
+import { useTetrisStore } from "../state/tetrisStore";
+import { composeAsciiGrid, composeAsciiPiece, CHAR_ASPECT } from "../utils/ascii";
 import MinimalModal from "../components/MinimalModal";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 const BLOCK_SIZE = Math.min(width * 0.05, 20);
 const GRID_WIDTH = 10;
 const GRID_HEIGHT = 20;
-const PLAY_WIDTH = BLOCK_SIZE * GRID_WIDTH;
-const PLAY_HEIGHT = BLOCK_SIZE * GRID_HEIGHT;
+const CELL = PixelRatio.roundToNearestPixel(BLOCK_SIZE);
+const PLAY_WIDTH = CELL * GRID_WIDTH;
+const PLAY_HEIGHT = CELL * GRID_HEIGHT;
 
 // Terminal colors
-const TERMINAL_GREEN = '#00FF00';
-const TERMINAL_DARK_GREEN = '#00AA00';
-const TERMINAL_BG = '#000';
+const TERMINAL_GREEN = "#00FF00";
+const TERMINAL_DARK_GREEN = "#00AA00";
+const TERMINAL_BG = "#000";
 
 // Piece definitions with proper SRS data
-const PIECES = {
+const PIECES: any = {
   I: {
     shape: [
       [0, 0, 0, 0],
       [1, 1, 1, 1],
       [0, 0, 0, 0],
-      [0, 0, 0, 0]
+      [0, 0, 0, 0],
     ],
-    color: '#00FFFF',
+    color: "#00FFFF",
     srs: {
-      '0-R': [{x: 0, y: 0}, {x: -2, y: 0}, {x: 1, y: 0}, {x: -2, y: -1}, {x: 1, y: 2}],
-      'R-0': [{x: 0, y: 0}, {x: 2, y: 0}, {x: -1, y: 0}, {x: 2, y: 1}, {x: -1, y: -2}],
-      'R-2': [{x: 0, y: 0}, {x: -1, y: 0}, {x: 2, y: 0}, {x: -1, y: 2}, {x: 2, y: -1}],
-      '2-R': [{x: 0, y: 0}, {x: 1, y: 0}, {x: -2, y: 0}, {x: 1, y: -2}, {x: -2, y: 1}],
-      '2-L': [{x: 0, y: 0}, {x: 2, y: 0}, {x: -1, y: 0}, {x: 2, y: 1}, {x: -1, y: -2}],
-      'L-2': [{x: 0, y: 0}, {x: -2, y: 0}, {x: 1, y: 0}, {x: -2, y: -1}, {x: 1, y: 2}],
-      'L-0': [{x: 0, y: 0}, {x: 1, y: 0}, {x: -2, y: 0}, {x: 1, y: -2}, {x: -2, y: 1}],
-      '0-L': [{x: 0, y: 0}, {x: -1, y: 0}, {x: 2, y: 0}, {x: -1, y: 2}, {x: 2, y: -1}]
-    }
+      "0-R": [{ x: 0, y: 0 }, { x: -2, y: 0 }, { x: 1, y: 0 }, { x: -2, y: -1 }, { x: 1, y: 2 }],
+      "R-0": [{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: -1, y: 0 }, { x: 2, y: 1 }, { x: -1, y: -2 }],
+      "R-2": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: 2, y: 0 }, { x: -1, y: 2 }, { x: 2, y: -1 }],
+      "2-R": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: -2, y: 0 }, { x: 1, y: -2 }, { x: -2, y: 1 }],
+      "2-L": [{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: -1, y: 0 }, { x: 2, y: 1 }, { x: -1, y: -2 }],
+      "L-2": [{ x: 0, y: 0 }, { x: -2, y: 0 }, { x: 1, y: 0 }, { x: -2, y: -1 }, { x: 1, y: 2 }],
+      "L-0": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: -2, y: 0 }, { x: 1, y: -2 }, { x: -2, y: 1 }],
+      "0-L": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: 2, y: 0 }, { x: -1, y: 2 }, { x: 2, y: -1 }],
+    },
   },
   J: {
     shape: [
       [1, 0, 0],
       [1, 1, 1],
-      [0, 0, 0]
+      [0, 0, 0],
     ],
-    color: '#0000FF',
+    color: "#0000FF",
     srs: {
-      '0-R': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: 1}, {x: 0, y: -2}, {x: -1, y: -2}],
-      'R-0': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: -1}, {x: 0, y: 2}, {x: 1, y: 2}],
-      'R-2': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: -1}, {x: 0, y: 2}, {x: 1, y: 2}],
-      '2-R': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: 1}, {x: 0, y: -2}, {x: -1, y: -2}],
-      '2-L': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: 1}, {x: 0, y: -2}, {x: 1, y: -2}],
-      'L-2': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: -1}, {x: 0, y: 2}, {x: -1, y: 2}],
-      'L-0': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: -1}, {x: 0, y: 2}, {x: -1, y: 2}],
-      '0-L': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: 1}, {x: 0, y: -2}, {x: 1, y: -2}]
-    }
+      "0-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
+      "R-0": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
+      "R-2": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
+      "2-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
+      "2-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
+      "L-2": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
+      "L-0": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
+      "0-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
+    },
   },
   L: {
     shape: [
       [0, 0, 1],
       [1, 1, 1],
-      [0, 0, 0]
+      [0, 0, 0],
     ],
-    color: '#FFA500',
+    color: "#FFA500",
     srs: {
-      '0-R': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: 1}, {x: 0, y: -2}, {x: -1, y: -2}],
-      'R-0': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: -1}, {x: 0, y: 2}, {x: 1, y: 2}],
-      'R-2': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: -1}, {x: 0, y: 2}, {x: 1, y: 2}],
-      '2-R': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: 1}, {x: 0, y: -2}, {x: -1, y: -2}],
-      '2-L': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: 1}, {x: 0, y: -2}, {x: 1, y: -2}],
-      'L-2': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: -1}, {x: 0, y: 2}, {x: -1, y: 2}],
-      'L-0': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: -1}, {x: 0, y: 2}, {x: -1, y: 2}],
-      '0-L': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: 1}, {x: 0, y: -2}, {x: 1, y: -2}]
-    }
+      "0-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
+      "R-0": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
+      "R-2": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
+      "2-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
+      "2-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
+      "L-2": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
+      "L-0": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
+      "0-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
+    },
   },
   O: {
     shape: [
       [1, 1],
-      [1, 1]
+      [1, 1],
     ],
-    color: '#FFFF00',
-    srs: {} // O piece doesn't rotate
+    color: "#FFFF00",
+    srs: {},
   },
   S: {
     shape: [
       [0, 1, 1],
       [1, 1, 0],
-      [0, 0, 0]
+      [0, 0, 0],
     ],
-    color: '#00FF00',
+    color: "#00FF00",
     srs: {
-      '0-R': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: 1}, {x: 0, y: -2}, {x: -1, y: -2}],
-      'R-0': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: -1}, {x: 0, y: 2}, {x: 1, y: 2}],
-      'R-2': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: -1}, {x: 0, y: 2}, {x: 1, y: 2}],
-      '2-R': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: 1}, {x: 0, y: -2}, {x: -1, y: -2}],
-      '2-L': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: 1}, {x: 0, y: -2}, {x: 1, y: -2}],
-      'L-2': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: -1}, {x: 0, y: 2}, {x: -1, y: 2}],
-      'L-0': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: -1}, {x: 0, y: 2}, {x: -1, y: 2}],
-      '0-L': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: 1}, {x: 0, y: -2}, {x: 1, y: -2}]
-    }
+      "0-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
+      "R-0": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
+      "R-2": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
+      "2-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
+      "2-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
+      "L-2": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
+      "L-0": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
+      "0-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
+    },
   },
   T: {
     shape: [
       [0, 1, 0],
       [1, 1, 1],
-      [0, 0, 0]
+      [0, 0, 0],
     ],
-    color: '#800080',
+    color: "#800080",
     srs: {
-      '0-R': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: 1}, {x: 0, y: -2}, {x: -1, y: -2}],
-      'R-0': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: -1}, {x: 0, y: 2}, {x: 1, y: 2}],
-      'R-2': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: -1}, {x: 0, y: 2}, {x: 1, y: 2}],
-      '2-R': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: 1}, {x: 0, y: -2}, {x: -1, y: -2}],
-      '2-L': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: 1}, {x: 0, y: -2}, {x: 1, y: -2}],
-      'L-2': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: -1}, {x: 0, y: 2}, {x: -1, y: 2}],
-      'L-0': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: -1}, {x: 0, y: 2}, {x: -1, y: 2}],
-      '0-L': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: 1}, {x: 0, y: -2}, {x: 1, y: -2}]
-    }
+      "0-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
+      "R-0": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
+      "R-2": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
+      "2-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
+      "2-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
+      "L-2": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
+      "L-0": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
+      "0-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
+    },
   },
   Z: {
     shape: [
       [1, 1, 0],
       [0, 1, 1],
-      [0, 0, 0]
+      [0, 0, 0],
     ],
-    color: '#FF0000',
+    color: "#FF0000",
     srs: {
-      '0-R': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: 1}, {x: 0, y: -2}, {x: -1, y: -2}],
-      'R-0': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: -1}, {x: 0, y: 2}, {x: 1, y: 2}],
-      'R-2': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: -1}, {x: 0, y: 2}, {x: 1, y: 2}],
-      '2-R': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: 1}, {x: 0, y: -2}, {x: -1, y: -2}],
-      '2-L': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: 1}, {x: 0, y: -2}, {x: 1, y: -2}],
-      'L-2': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: -1}, {x: 0, y: 2}, {x: -1, y: 2}],
-      'L-0': [{x: 0, y: 0}, {x: -1, y: 0}, {x: -1, y: -1}, {x: 0, y: 2}, {x: -1, y: 2}],
-      '0-L': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: 1}, {x: 0, y: -2}, {x: 1, y: -2}]
-    }
-  }
+      "0-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
+      "R-0": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
+      "R-2": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: -1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
+      "2-R": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 1 }, { x: 0, y: -2 }, { x: -1, y: -2 }],
+      "2-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
+      "L-2": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
+      "L-0": [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -1, y: -1 }, { x: 0, y: 2 }, { x: -1, y: 2 }],
+      "0-L": [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: -2 }, { x: 1, y: -2 }],
+    },
+  },
 };
-
-
 
 export default function TetrisScreen() {
   const insets = useSafeAreaInsets();
   const [demoErrorVisible, setDemoErrorVisible] = useState(false);
+
   const {
     grid,
     currentPiece,
@@ -184,81 +187,71 @@ export default function TetrisScreen() {
         dropPiece();
       }, dropIntervalRef.current);
     } else {
-      if (gameLoopRef.current) {
-        clearInterval(gameLoopRef.current);
-      }
+      if (gameLoopRef.current) clearInterval(gameLoopRef.current);
     }
-
     return () => {
-      if (gameLoopRef.current) {
-        clearInterval(gameLoopRef.current);
-      }
+      if (gameLoopRef.current) clearInterval(gameLoopRef.current);
     };
   }, [gameOver, paused, dropPiece]);
 
-  // Update drop speed based on level
   useEffect(() => {
-    dropIntervalRef.current = Math.max(50, 1000 - (level * 50));
+    dropIntervalRef.current = Math.max(50, 1000 - level * 50);
   }, [level]);
 
-  const handleMove = useCallback((direction: 'left' | 'right') => {
-    if (!gameOver && !paused) {
-      movePiece(direction);
-      if (Platform.OS === 'ios') {
-        Vibration.vibrate(10);
+  const handleMove = useCallback(
+    (direction: "left" | "right") => {
+      if (!gameOver && !paused) {
+        movePiece(direction);
+        if (Platform.OS === "ios") Vibration.vibrate(10);
       }
-    }
-  }, [gameOver, paused, movePiece]);
+    },
+    [gameOver, paused, movePiece]
+  );
 
   const handleRotate = useCallback(() => {
     if (!gameOver && !paused) {
       rotatePiece();
-      if (Platform.OS === 'ios') {
-        Vibration.vibrate(10);
-      }
+      if (Platform.OS === "ios") Vibration.vibrate(10);
     }
   }, [gameOver, paused, rotatePiece]);
 
   const handleDrop = useCallback(() => {
-    if (!gameOver && !paused) {
-      dropPiece();
-    }
+    if (!gameOver && !paused) dropPiece();
   }, [gameOver, paused, dropPiece]);
 
   const handleHardDrop = useCallback(() => {
     if (!gameOver && !paused) {
       hardDrop();
-      if (Platform.OS === 'ios') {
-        Vibration.vibrate(50);
-      }
+      if (Platform.OS === "ios") Vibration.vibrate(50);
     }
   }, [gameOver, paused, hardDrop]);
 
   const renderGrid = () => {
-    const cells = [];
+    const cells: any[] = [];
     for (let row = 0; row < GRID_HEIGHT; row++) {
       for (let col = 0; col < GRID_WIDTH; col++) {
         const cellValue = grid[row]?.[col] || 0;
-        const isCurrentPiece = currentPiece && 
-          row >= currentPiece.position.y && 
+        const isCurrentPiece =
+          currentPiece &&
+          row >= currentPiece.position.y &&
           row < currentPiece.position.y + currentPiece.shape.length &&
-          col >= currentPiece.position.x && 
+          col >= currentPiece.position.x &&
           col < currentPiece.position.x + currentPiece.shape[0].length &&
-          currentPiece.shape[row - currentPiece.position.y]?.[col - currentPiece.position.x];
-
+          currentPiece.shape[row - currentPiece.position.y]?.[
+            col - currentPiece.position.x
+          ];
         cells.push(
           <View
             key={`${row}-${col}`}
             style={[
               styles.cell,
               {
-                backgroundColor: isCurrentPiece 
-                  ? currentPiece.color 
-                  : cellValue 
-                    ? cellValue 
-                    : TERMINAL_BG,
-                borderColor: TERMINAL_DARK_GREEN,
-              }
+                backgroundColor: isCurrentPiece
+                  ? currentPiece.color
+                  : cellValue
+                  ? cellValue
+                  : TERMINAL_BG,
+              },
             ]}
           />
         );
@@ -267,14 +260,27 @@ export default function TetrisScreen() {
     return cells;
   };
 
+  const renderGridLines = () => {
+    const linesV = Array.from({ length: GRID_WIDTH - 1 }).map((_, i) => (
+      <View key={`v-${i + 1}`} style={[styles.gridLineV, { left: (i + 1) * CELL, height: PLAY_HEIGHT }]} />
+    ));
+    const linesH = Array.from({ length: GRID_HEIGHT - 1 }).map((_, j) => (
+      <View key={`h-${j + 1}`} style={[styles.gridLineH, { top: (j + 1) * CELL, width: PLAY_WIDTH }]} />
+    ));
+    return (
+      <>
+        {linesV}
+        {linesH}
+      </>
+    );
+  };
+
   const renderNextPiece = () => {
     if (!nextPiece) return null;
     const shape = PIECES[nextPiece].shape;
     if (asciiMode) {
       const text = composeAsciiPiece(shape, PIECES[nextPiece].color);
-      return (
-        <Text style={styles.asciiTextSmall}>{text}</Text>
-      );
+      return <Text style={styles.asciiTextSmall}>{text}</Text>;
     }
     const cells: any[] = [];
     for (let row = 0; row < shape.length; row++) {
@@ -289,7 +295,7 @@ export default function TetrisScreen() {
                   backgroundColor: PIECES[nextPiece].color,
                   left: col * (BLOCK_SIZE * 0.6),
                   top: row * (BLOCK_SIZE * 0.6),
-                }
+                },
               ]}
             />
           );
@@ -298,6 +304,63 @@ export default function TetrisScreen() {
     }
     return cells;
   };
+
+  // Gestures
+  const accX = useSharedValue(0);
+  const accY = useSharedValue(0);
+  const lastTX = useSharedValue(0);
+  const lastTY = useSharedValue(0);
+
+  const pan = Gesture.Pan()
+    .onBegin(() => {
+      accX.value = 0;
+      accY.value = 0;
+      lastTX.value = 0;
+      lastTY.value = 0;
+    })
+    .onUpdate((e) => {
+      const dx = e.translationX - lastTX.value;
+      const dy = e.translationY - lastTY.value;
+      lastTX.value = e.translationX;
+      lastTY.value = e.translationY;
+      accX.value += dx;
+      while (accX.value >= CELL) {
+        runOnJS(movePiece)("right");
+        accX.value -= CELL;
+        if (Platform.OS === "ios") Vibration.vibrate(8);
+      }
+      while (accX.value <= -CELL) {
+        runOnJS(movePiece)("left");
+        accX.value += CELL;
+        if (Platform.OS === "ios") Vibration.vibrate(8);
+      }
+      accY.value += dy;
+      while (accY.value >= CELL) {
+        runOnJS(dropPiece)();
+        accY.value -= CELL;
+      }
+    })
+    .onEnd(() => {
+      accX.value = 0;
+      accY.value = 0;
+      lastTX.value = 0;
+      lastTY.value = 0;
+    });
+
+  const tap = Gesture.Tap().onEnd(() => {
+    runOnJS(rotatePiece)();
+    if (Platform.OS === "ios") Vibration.vibrate(10);
+  });
+  const flingUp = Gesture.Fling().direction(Directions.UP).onEnd(() => {
+    runOnJS(hardDrop)();
+    if (Platform.OS === "ios") Vibration.vibrate(50);
+  });
+  const flingDown = Gesture.Fling().direction(Directions.DOWN).onEnd(() => {
+    runOnJS(dropPiece)();
+  });
+  const composedGesture = Gesture.Simultaneous(pan, tap, flingUp, flingDown);
+
+  const asciiFontSize = Math.floor(PLAY_WIDTH / (GRID_WIDTH * CHAR_ASPECT));
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -314,43 +377,49 @@ export default function TetrisScreen() {
         <View style={styles.leftPanel}>
           <View style={styles.nextPieceContainer}>
             <Text style={styles.nextTitle}>NEXT</Text>
-            <View style={styles.nextPieceBox}>
-              {renderNextPiece()}
-            </View>
+            <View style={styles.nextPieceBox}>{renderNextPiece()}</View>
           </View>
         </View>
 
         <View style={styles.playArea}>
-          <View style={[styles.grid, { width: PLAY_WIDTH, height: PLAY_HEIGHT }]}>
-            {asciiMode ? (
-              <Text style={[styles.asciiText, { fontSize: Math.floor(PLAY_WIDTH / GRID_WIDTH), lineHeight: Math.floor(PLAY_WIDTH / GRID_WIDTH) * 1.05 }]}>
-                {composeAsciiGrid(grid as any, currentPiece as any)}
-              </Text>
-            ) : (
-              renderGrid()
-            )}
-          </View>
+          <GestureDetector gesture={composedGesture}>
+            <View style={[styles.grid, { width: PLAY_WIDTH, height: PLAY_HEIGHT }]}>
+              {asciiMode ? (
+                <Text
+                  style={[
+                    styles.asciiText,
+                    {
+                      fontSize: asciiFontSize,
+                      lineHeight: Math.floor(asciiFontSize * 1.05),
+                    },
+                  ]}
+                  allowFontScaling={false}
+                  numberOfLines={GRID_HEIGHT}
+                >
+                  {composeAsciiGrid(grid as any, currentPiece as any)}
+                </Text>
+              ) : (
+                <>
+                  {renderGrid()}
+                  <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+                    {renderGridLines()}
+                  </View>
+                </>
+              )}
+            </View>
+          </GestureDetector>
         </View>
 
         <View style={styles.rightPanel}>
-          <Pressable
-            style={styles.controlButton}
-            onPress={pauseGame}
-          >
+          <Pressable style={styles.controlButton} onPress={pauseGame}>
             <Text style={styles.buttonText}>{paused ? "RESUME" : "PAUSE"}</Text>
           </Pressable>
-          
-          <Pressable
-            style={styles.controlButton}
-            onPress={resetGame}
-          >
+
+          <Pressable style={styles.controlButton} onPress={resetGame}>
             <Text style={styles.buttonText}>RESET</Text>
           </Pressable>
 
-          <Pressable
-            style={styles.controlButton}
-            onPress={toggleAsciiMode}
-          >
+          <Pressable style={styles.controlButton} onPress={toggleAsciiMode}>
             <Text style={styles.buttonText}>{asciiMode ? "ASCII ON" : "ASCII OFF"}</Text>
           </Pressable>
         </View>
@@ -379,40 +448,21 @@ export default function TetrisScreen() {
 
       <View style={styles.controls}>
         <View style={styles.controlRow}>
-          <Pressable
-            style={styles.moveButton}
-            onPress={() => handleMove('left')}
-          >
+          <Pressable style={styles.moveButton} onPress={() => handleMove("left")}> 
             <Text style={styles.buttonText}>←</Text>
           </Pressable>
-          
-          <Pressable
-            style={styles.moveButton}
-            onPress={handleRotate}
-          >
+          <Pressable style={styles.moveButton} onPress={handleRotate}>
             <Text style={styles.buttonText}>↻</Text>
           </Pressable>
-          
-          <Pressable
-            style={styles.moveButton}
-            onPress={() => handleMove('right')}
-          >
+          <Pressable style={styles.moveButton} onPress={() => handleMove("right")}>
             <Text style={styles.buttonText}>→</Text>
           </Pressable>
         </View>
-        
         <View style={styles.controlRow}>
-          <Pressable
-            style={styles.dropButton}
-            onPress={handleDrop}
-          >
+          <Pressable style={styles.dropButton} onPress={handleDrop}>
             <Text style={styles.buttonText}>SOFT DROP</Text>
           </Pressable>
-          
-          <Pressable
-            style={styles.dropButton}
-            onPress={handleHardDrop}
-          >
+          <Pressable style={styles.dropButton} onPress={handleHardDrop}>
             <Text style={styles.buttonText}>HARD DROP</Text>
           </Pressable>
         </View>
@@ -425,42 +475,42 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: TERMINAL_BG,
-    alignItems: 'center',
+    alignItems: "center",
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 20,
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: TERMINAL_GREEN,
     marginBottom: 10,
   },
   stats: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 20,
   },
   statText: {
     color: TERMINAL_GREEN,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   gameArea: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 20,
   },
   leftPanel: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   nextPieceContainer: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   nextTitle: {
     color: TERMINAL_GREEN,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 10,
   },
   nextPieceBox: {
@@ -468,28 +518,30 @@ const styles = StyleSheet.create({
     height: BLOCK_SIZE * 4 * 0.6,
     borderWidth: 2,
     borderColor: TERMINAL_GREEN,
-    position: 'relative',
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
   },
   nextCell: {
-    position: 'absolute',
+    position: "absolute",
     width: BLOCK_SIZE * 0.6,
     height: BLOCK_SIZE * 0.6,
     borderWidth: 1,
     borderColor: TERMINAL_DARK_GREEN,
   },
   playArea: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     borderWidth: 2,
     borderColor: TERMINAL_GREEN,
+    position: "relative",
   },
   cell: {
-    width: BLOCK_SIZE,
-    height: BLOCK_SIZE,
-    borderWidth: StyleSheet.hairlineWidth,
+    width: CELL,
+    height: CELL,
   },
   rightPanel: {
     gap: 10,
@@ -503,22 +555,22 @@ const styles = StyleSheet.create({
     borderColor: TERMINAL_GREEN,
   },
   controls: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 50,
     gap: 15,
   },
   controlRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 15,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   moveButton: {
     backgroundColor: TERMINAL_DARK_GREEN,
     width: 60,
     height: 60,
     borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
     borderColor: TERMINAL_GREEN,
   },
@@ -533,23 +585,23 @@ const styles = StyleSheet.create({
   buttonText: {
     color: TERMINAL_GREEN,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   gameOverOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
     gap: 20,
   },
   gameOverText: {
     color: TERMINAL_GREEN,
     fontSize: 48,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   finalScore: {
     color: TERMINAL_GREEN,
@@ -564,19 +616,34 @@ const styles = StyleSheet.create({
     borderColor: TERMINAL_GREEN,
   },
   asciiText: {
-    color: '#79F28A',
-    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
-    textShadowColor: '#00FF00',
+    color: "#79F28A",
+    fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
+    textShadowColor: "#00FF00",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 6,
   },
   asciiTextSmall: {
-    color: '#79F28A',
-    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
-    fontSize: Math.floor((BLOCK_SIZE * 0.6)),
-    lineHeight: Math.floor((BLOCK_SIZE * 0.6) * 1.05),
-    textShadowColor: '#00FF00',
+    color: "#79F28A",
+    fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
+    fontSize: Math.floor(BLOCK_SIZE * 0.6),
+    lineHeight: Math.floor(BLOCK_SIZE * 0.6 * 1.05),
+    textShadowColor: "#00FF00",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 4,
+    textAlign: "center",
+  },
+  gridLineV: {
+    position: "absolute",
+    top: 0,
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: TERMINAL_DARK_GREEN,
+    opacity: 0.6,
+  },
+  gridLineH: {
+    position: "absolute",
+    left: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: TERMINAL_DARK_GREEN,
+    opacity: 0.6,
   },
 });
