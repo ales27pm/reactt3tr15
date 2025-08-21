@@ -52,35 +52,19 @@ interface TetrisState {
   lastClearedRows: number[] | null;
   lastLockAt: number | null;
   // settings
-  showGridLines: boolean;
-  showGhost: boolean;
-  enableHaptics: boolean;
-  enableSfx: boolean;
-  slashTrailEnabled: boolean;
-  showHints: boolean;
-}
-
-interface TetrisActions {
-  initializeGame: () => void;
-  movePiece: (direction: "left" | "right") => void;
-  rotatePiece: () => void;
-  gravityStep: () => void;
-  dropPiece: () => void; // soft drop one cell (user)
-  hardDrop: () => void;
-  holdSwap: () => void;
-  pauseGame: () => void;
-  resetGame: () => void;
-  toggleAsciiMode: () => void;
-  // settings toggles
   toggleGridLines: () => void;
   toggleGhost: () => void;
   toggleHaptics: () => void;
   toggleSfx: () => void;
   toggleSlashTrail: () => void;
+  toggleMatrixRain: () => void;
+  toggleGlitchFx: () => void;
+  setDas: (ms: number) => void;
+  setArr: (ms: number) => void;
   hideHints: () => void;
 }
 
-export const useTetrisStore = create<TetrisState & TetrisActions>()(
+export const useTetrisStore = create<any>()(
   persist(
     (set, get) => ({
       grid: createEmptyGrid(),
@@ -107,6 +91,10 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
       enableSfx: false,
       slashTrailEnabled: true,
       showHints: true,
+      matrixRainEnabled: true,
+      glitchFxEnabled: true,
+      dasMs: 160,
+      arrMs: 40,
 
       initializeGame: () => {
         const nextQueue = ensureQueue([], 14);
@@ -128,6 +116,10 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
           lockExpireAt: null,
           lastClearedRows: null,
           lastLockAt: null,
+          matrixRainEnabled: true,
+          glitchFxEnabled: true,
+          dasMs: 160,
+          arrMs: 40,
         });
       },
 
@@ -178,9 +170,9 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
         const ny = currentPiece.position.y + 1;
         if (isValidPosition(grid, currentPiece, currentPiece.position.x, ny)) {
           // soft drop bonus +1
-          set((state) => ({
+          set((s: any) => ({
             currentPiece: { ...currentPiece, position: { ...currentPiece.position, y: ny } },
-            score: state.score + 1,
+            score: s.score + 1,
             lockExpireAt: null,
           }));
         } else {
@@ -193,9 +185,9 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
         if (!currentPiece || gameOver || paused) return;
         const dist = computeDropDistance(grid, currentPiece);
         const gy = currentPiece.position.y + dist;
-        set((state) => ({
+        set((s: any) => ({
           currentPiece: { ...currentPiece, position: { ...currentPiece.position, y: gy } },
-          score: state.score + dist * 2,
+          score: s.score + dist * 2,
         }));
         lockAndSpawn();
       },
@@ -211,7 +203,7 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
           incoming = head;
         }
         const newHold = currentPiece.type;
-        const newCurrent = createPiece(incoming);
+        const newCurrent = createPiece(incoming as PieceType);
         if (!isValidPosition(grid, newCurrent, newCurrent.position.x, newCurrent.position.y)) {
           set({ gameOver: true });
           return;
@@ -219,18 +211,22 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
         set({ currentPiece: newCurrent, holdPiece: newHold, canHold: false, lockExpireAt: null });
       },
 
-      pauseGame: () => set((s) => ({ paused: !s.paused })),
+       pauseGame: () => set((s: any) => ({ paused: !s.paused })),
 
       resetGame: () => get().initializeGame(),
 
-      toggleAsciiMode: () => set((s) => ({ asciiMode: !s.asciiMode })),
+       toggleAsciiMode: () => set((s: any) => ({ asciiMode: !s.asciiMode })),
 
       // settings
-      toggleGridLines: () => set((s) => ({ showGridLines: !s.showGridLines })),
-      toggleGhost: () => set((s) => ({ showGhost: !s.showGhost })),
-      toggleHaptics: () => set((s) => ({ enableHaptics: !s.enableHaptics })),
-      toggleSfx: () => set((s) => ({ enableSfx: !s.enableSfx })),
-      toggleSlashTrail: () => set((s) => ({ slashTrailEnabled: !s.slashTrailEnabled })),
+      toggleGridLines: () => set((s: any) => ({ showGridLines: !s.showGridLines })),
+      toggleGhost: () => set((s: any) => ({ showGhost: !s.showGhost })),
+      toggleHaptics: () => set((s: any) => ({ enableHaptics: !s.enableHaptics })),
+      toggleSfx: () => set((s: any) => ({ enableSfx: !s.enableSfx })),
+      toggleSlashTrail: () => set((s: any) => ({ slashTrailEnabled: !s.slashTrailEnabled })),
+      toggleMatrixRain: () => set((s: any) => ({ matrixRainEnabled: !s.matrixRainEnabled })),
+      toggleGlitchFx: () => set((s: any) => ({ glitchFxEnabled: !s.glitchFxEnabled })),
+      setDas: (ms: number) => set(() => ({ dasMs: Math.max(50, Math.min(ms, 300)) })),
+      setArr: (ms: number) => set(() => ({ arrMs: Math.max(10, Math.min(ms, 200)) })),
       hideHints: () => set(() => ({ showHints: false })),
     }),
     {
@@ -245,6 +241,10 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
         enableSfx: state.enableSfx,
         slashTrailEnabled: state.slashTrailEnabled,
         showHints: state.showHints,
+        matrixRainEnabled: state.matrixRainEnabled,
+        glitchFxEnabled: state.glitchFxEnabled,
+        dasMs: state.dasMs,
+        arrMs: state.arrMs,
       }),
     }
   )

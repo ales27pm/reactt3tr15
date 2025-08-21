@@ -10,24 +10,27 @@ type SimplePiece = {
   color: string;
 };
 
-const COLOR_TO_CHAR: Record<string, string> = {
-  "#00FFFF": "=", // I
-  "#0000FF": "#", // J
-  "#FFA500": "+", // L
-  "#FFFF00": "*", // O
-  "#00FF00": "x", // S (fixed-width)
-  "#800080": "%", // T
-  "#FF0000": "@", // Z
+const COLOR_TO_CHAR: Record<string, string[]> = {
+  "#00FFFF": ["=","≡","─","━"], // I
+  "#0000FF": ["#","▓","▒","░"], // J
+  "#FFA500": ["+","▌","▐","■"], // L
+  "#FFFF00": ["*","●","○","◎"], // O
+  "#00FF00": ["x","◇","◆","◈"], // S
+  "#800080": ["%","▲","△","▼"], // T
+  "#FF0000": ["@","◢","◣","◤"], // Z
 };
 
-export const getGlyphForColor = (color?: string | null) => {
+export const getGlyphForColor = (color?: string | null, x?: number, y?: number) => {
   if (!color) return " ";
-  return COLOR_TO_CHAR[color] || "#";
+  const arr = COLOR_TO_CHAR[color] || ["#"]; const t = Math.floor(Date.now() / 500);
+  if (x == null || y == null) return arr[0];
+  const idx = Math.abs((x * 31 + y * 17 + t) % arr.length);
+  return arr[idx];
 };
 
 const charForColor = (color?: string | null) => {
   if (!color) return " ";
-  return COLOR_TO_CHAR[color] || "#";
+  const arr = COLOR_TO_CHAR[color] || ["#"]; return arr[0];
 };
 
 export const composeAsciiGrid = (

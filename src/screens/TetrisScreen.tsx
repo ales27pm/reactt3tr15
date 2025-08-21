@@ -19,6 +19,7 @@ import { getGlyphForColor } from "../utils/ascii";
 import MinimalModal from "../components/MinimalModal";
 import SlashTrail, { Point as SlashPoint } from "../components/SlashTrail";
 import { playSfx, setSfxEnabled } from "../utils/sfx";
+import MatrixRain from "../components/MatrixRain";
 
 const { width } = Dimensions.get("window");
 const BLOCK_SIZE = Math.min(width * 0.05, 20);
@@ -56,6 +57,8 @@ export default function TetrisScreen() {
   const lastClearedRows = useTetrisStore((s) => s.lastClearedRows);
   const lastLockAt = useTetrisStore((s) => s.lastLockAt);
   const enableSfx = useTetrisStore((s) => s.enableSfx);
+  const matrixRainEnabled = useTetrisStore((s) => s.matrixRainEnabled);
+  const glitchFxEnabled = useTetrisStore((s) => s.glitchFxEnabled);
 
 
   const initializeGame = useTetrisStore((s) => s.initializeGame);
@@ -73,6 +76,10 @@ export default function TetrisScreen() {
   const toggleHaptics = useTetrisStore((s) => s.toggleHaptics);
   const toggleSlashTrail = useTetrisStore((s) => s.toggleSlashTrail);
   const toggleSfx = useTetrisStore((s) => s.toggleSfx);
+  const toggleMatrixRain = useTetrisStore((s) => s.toggleMatrixRain);
+  const toggleGlitchFx = useTetrisStore((s) => s.toggleGlitchFx);
+  const setDas = useTetrisStore((s) => s.setDas);
+  const setArr = useTetrisStore((s) => s.setArr);
   const hideHints = useTetrisStore((s) => s.hideHints);
 
   // Start
@@ -159,13 +166,19 @@ export default function TetrisScreen() {
   const slashActiveSV = useSharedValue(0);
   const lineFlash = useSharedValue(0);
   const borderPulse = useSharedValue(0);
+  const glitchSV = useSharedValue(0);
+  const scanY = useSharedValue(-20);
+  const headerBlink = useSharedValue(0);
+  useEffect(() => { headerBlink.value = withTiming(1, { duration: 600, easing: Easing.linear }, () => { headerBlink.value = 0; }); });
   useEffect(() => { pausedSV.value = paused ? 1 : 0; }, [paused]);
   useEffect(() => { gameOverSV.value = gameOver ? 1 : 0; }, [gameOver]);
   useEffect(() => { setSfxEnabled(enableSfx); }, [enableSfx]);
   useEffect(() => {
     if (lastClearedRows && lastClearedRows.length > 0) {
       lineFlash.value = 1;
+      glitchSV.value = 1;
       lineFlash.value = withTiming(0, { duration: 220, easing: Easing.out(Easing.quad) });
+      glitchSV.value = withTiming(0, { duration: 220, easing: Easing.out(Easing.quad) });
       if (enableSfx) playSfx("line");
     }
   }, [lastClearedRows, enableSfx]);
@@ -173,6 +186,8 @@ export default function TetrisScreen() {
     if (lastLockAt) {
       borderPulse.value = 1;
       borderPulse.value = withTiming(0, { duration: 180, easing: Easing.out(Easing.cubic) });
+      scanY.value = -20;
+      scanY.value = withTiming(PLAY_HEIGHT + 40, { duration: 220, easing: Easing.out(Easing.cubic) });
       if (enableSfx) playSfx("lock");
     }
   }, [lastLockAt, enableSfx]);
@@ -242,6 +257,14 @@ export default function TetrisScreen() {
 
   const lineFlashStyle = useAnimatedStyle(() => ({ opacity: lineFlash.value * 0.7 }));
 
+  const scanlineStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: scanY.value }], opacity: 0.25,
+  }));
+
+  const glitchRowStyle = (row: number) => useAnimatedStyle(() => ({
+    transform: [{ translateX: glitchSV.value * (((row * 13) % 5) - 2) }],
+  }));
+
   const renderAsciiGhost = () => {
     if (!currentPiece) return null;
     const gy = ghostDropY(grid, currentPiece);
@@ -256,7 +279,7 @@ export default function TetrisScreen() {
               style={[styles.asciiGlyph, { left: (currentPiece.position.x + c) * CELL, top: (gy + r) * CELL, width: CELL, height: CELL, lineHeight: CELL, fontSize: Math.floor(CELL * 0.9), opacity: 0.25 }]}
               allowFontScaling={false}
             >
-              {getGlyphForColor(currentPiece.color)}
+              {getGlyphForColor(currentPiece.color, currentPiece.position.x + c, gy + r)}
             </Text>
           );
         }
@@ -341,7 +364,7 @@ export default function TetrisScreen() {
               ]}
               allowFontScaling={false}
             >
-              {getGlyphForColor(glyphColor)}
+              {getGlyphForColor(glyphColor, x, y)}
             </Text>
           );
         }
@@ -402,7 +425,7 @@ export default function TetrisScreen() {
     return (
       <View style={{ gap: 10 }}>
         <Text style={styles.nextTitle}>NEXT</Text>
-        {show.map((t, idx) => (
+        {show.map((t: keyof typeof PIECES, idx: number) => (
           <View key={`q-${idx}-${t}`} style={[styles.nextPieceBox, { height: BLOCK_SIZE * 4 * 0.6 }]}>
             {renderMiniPiece(t)}
           </View>
@@ -438,6 +461,7 @@ export default function TetrisScreen() {
         </View>
 
         <View style={styles.playArea}>
+          {matrixRainEnabled && <MatrixRain />}
           <GestureDetector gesture={composedGesture}>
             <Animated.View style={[styles.grid, gridAnimatedStyle, { width: PLAY_WIDTH, height: PLAY_HEIGHT }] }>
               {asciiMode ? (
@@ -457,9 +481,10 @@ export default function TetrisScreen() {
                   </View>
                 </>
               )}
-              {lastClearedRows?.map((r) => (
-                <Animated.View key={`clr-${r}`} style={[{ position: "absolute", left: 0, top: r * CELL, width: PLAY_WIDTH, height: CELL, backgroundColor: TERMINAL_GREEN }, lineFlashStyle]} />
+              {lastClearedRows?.map((r: number) => (
+                <Animated.View key={`clr-${r}`} style={[{ position: "absolute", left: 0, top: r * CELL, width: PLAY_WIDTH, height: CELL, backgroundColor: TERMINAL_GREEN }, lineFlashStyle, glitchFxEnabled ? glitchRowStyle(r) : null]} />
               ))}
+              <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, width: PLAY_WIDTH, height: 18, backgroundColor: TERMINAL_GREEN }, scanlineStyle]} />
               {slashTrailEnabled && (
                 <SlashTrail
                   isActive={isSlashActive}
@@ -520,6 +545,22 @@ export default function TetrisScreen() {
             <Pressable style={styles.settingRow} onPress={toggleHaptics}><Text style={styles.settingText}>Haptics: {enableHaptics ? "On" : "Off"}</Text></Pressable>
             <Pressable style={styles.settingRow} onPress={toggleSlashTrail}><Text style={styles.settingText}>Slash trail: {slashTrailEnabled ? "On" : "Off"}</Text></Pressable>
             <Pressable style={styles.settingRow} onPress={toggleSfx}><Text style={styles.settingText}>SFX: {enableSfx ? "On" : "Off"}</Text></Pressable>
+            <Pressable style={styles.settingRow} onPress={toggleMatrixRain}><Text style={styles.settingText}>Matrix rain: {matrixRainEnabled ? "On" : "Off"}</Text></Pressable>
+            <Pressable style={styles.settingRow} onPress={toggleGlitchFx}><Text style={styles.settingText}>Glitch FX: {glitchFxEnabled ? "On" : "Off"}</Text></Pressable>
+            <View style={[styles.settingRow, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
+              <Text style={styles.settingText}>DAS: {useTetrisStore.getState().dasMs} ms</Text>
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <Pressable style={styles.controlButton} onPress={() => setDas(useTetrisStore.getState().dasMs - 10)}><Text style={styles.buttonText}>-</Text></Pressable>
+                <Pressable style={styles.controlButton} onPress={() => setDas(useTetrisStore.getState().dasMs + 10)}><Text style={styles.buttonText}>+</Text></Pressable>
+              </View>
+            </View>
+            <View style={[styles.settingRow, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
+              <Text style={styles.settingText}>ARR: {useTetrisStore.getState().arrMs} ms</Text>
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <Pressable style={styles.controlButton} onPress={() => setArr(useTetrisStore.getState().arrMs - 5)}><Text style={styles.buttonText}>-</Text></Pressable>
+                <Pressable style={styles.controlButton} onPress={() => setArr(useTetrisStore.getState().arrMs + 5)}><Text style={styles.buttonText}>+</Text></Pressable>
+              </View>
+            </View>
             <Pressable style={[styles.dropButton, { marginTop: 12 }]} onPress={() => setSettingsVisible(false)}><Text style={styles.buttonText}>Close</Text></Pressable>
           </View>
         </View>
