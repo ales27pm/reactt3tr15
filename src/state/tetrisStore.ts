@@ -142,6 +142,8 @@ interface TetrisState {
   grid: (string | null)[][];
   currentPiece: CurrentPiece | null;
   nextPiece: PieceType | null;
+  holdPiece: PieceType | null;
+  canHold: boolean;
   score: number;
   level: number;
   lines: number;
@@ -157,6 +159,7 @@ interface TetrisActions {
   rotatePiece: () => void;
   dropPiece: () => void;
   hardDrop: () => void;
+  holdSwap: () => void;
   pauseGame: () => void;
   resetGame: () => void;
   toggleAsciiMode: () => void;
@@ -323,6 +326,8 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
       paused: false,
       highScore: 0,
       asciiMode: true,
+      holdPiece: null,
+      canHold: true,
 
       initializeGame: () => {
         const nextPiece = getRandomPiece();
@@ -332,6 +337,8 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
           grid: createEmptyGrid(),
           currentPiece,
           nextPiece,
+          holdPiece: null,
+          canHold: true,
           score: 0,
           level: 0,
           lines: 0,
@@ -403,47 +410,58 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
           const newScore = score + calculateScore(linesCleared, level);
           const newHighScore = Math.max(highScore, newScore);
           
-          const newCurrentPiece = nextPiece ? createPiece(nextPiece) : null;
-          const newNextPiece = getRandomPiece();
-          
-          // Check for game over
-          const gameOver = newCurrentPiece ? 
-            !isValidPosition(clearedGrid, newCurrentPiece, newCurrentPiece.position.x, newCurrentPiece.position.y) : 
-            true;
-          
-          set({
-            grid: clearedGrid,
-            currentPiece: gameOver ? null : newCurrentPiece,
-            nextPiece: gameOver ? null : newNextPiece,
-            score: newScore,
-            level: newLevel,
-            lines: newLines,
-            gameOver,
-            highScore: newHighScore,
-          });
+           const newCurrentPiece = nextPiece ? createPiece(nextPiece) : null;
+           const newNextPiece = getRandomPiece();
+           const canHold = true;
+           
+           // Check for game over
+           const gameOver = newCurrentPiece ? 
+             !isValidPosition(clearedGrid, newCurrentPiece, newCurrentPiece.position.x, newCurrentPiece.position.y) : 
+             true;
+           
+           set({
+             grid: clearedGrid,
+             currentPiece: gameOver ? null : newCurrentPiece,
+             nextPiece: gameOver ? null : newNextPiece,
+             score: newScore,
+             level: newLevel,
+             lines: newLines,
+             gameOver,
+             highScore: newHighScore,
+             canHold,
+           });
         }
       },
 
       hardDrop: () => {
         const { grid, currentPiece } = get();
-        
         if (!currentPiece || get().gameOver || get().paused) return;
-        
         let newY = currentPiece.position.y;
-        
-        while (isValidPosition(grid, currentPiece, currentPiece.position.x, newY + 1)) {
-          newY++;
-        }
-        
-        set({
-          currentPiece: {
-            ...currentPiece,
-            position: { ...currentPiece.position, y: newY }
-          }
-        });
-        
-        // Immediately drop the piece
+        while (isValidPosition(grid, currentPiece, currentPiece.position.x, newY + 1)) newY++;
+        set({ currentPiece: { ...currentPiece, position: { ...currentPiece.position, y: newY } } });
         setTimeout(() => get().dropPiece(), 0);
+      },
+
+      holdSwap: () => {
+        const { currentPiece, holdPiece, canHold, nextPiece, grid } = get();
+        if (!currentPiece || !canHold) return;
+        let incoming: PieceType | null = null;
+        if (holdPiece) {
+          incoming = holdPiece;
+        } else if (nextPiece) {
+          incoming = nextPiece;
+        } else {
+          incoming = getRandomPiece();
+        }
+        const newHold = currentPiece.type;
+        const newCurrent = incoming ? createPiece(incoming) : null;
+        const newNext = incoming === nextPiece ? getRandomPiece() : nextPiece;
+        if (newCurrent && !isValidPosition(grid, newCurrent, newCurrent.position.x, newCurrent.position.y)) {
+          // cannot swap into a valid spawn -> game over
+          set({ gameOver: true });
+          return;
+        }
+        set({ currentPiece: newCurrent, holdPiece: newHold, canHold: false, nextPiece: newNext || getRandomPiece() });
       },
 
       pauseGame: () => {

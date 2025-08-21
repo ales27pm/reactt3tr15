@@ -226,6 +226,70 @@ export default function TetrisScreen() {
     }
   }, [gameOver, paused, hardDrop]);
 
+  const isValid = (
+    testX: number,
+    testY: number,
+    shape: number[][]
+  ) => {
+    for (let r = 0; r < shape.length; r++) {
+      for (let c = 0; c < shape[r].length; c++) {
+        if (!shape[r][c]) continue;
+        const x = testX + c;
+        const y = testY + r;
+        if (x < 0 || x >= GRID_WIDTH || y >= GRID_HEIGHT) return false;
+        if (y >= 0 && grid[y]?.[x]) return false;
+      }
+    }
+    return true;
+  };
+
+  const ghostY = () => {
+    if (!currentPiece) return 0;
+    let y = currentPiece.position.y;
+    while (isValid(currentPiece.position.x, y + 1, currentPiece.shape)) y++;
+    return y;
+  };
+
+  const renderAsciiGhost = () => {
+    if (!currentPiece) return null;
+    const gy = ghostY();
+    if (gy <= currentPiece.position.y) return null;
+    const items: any[] = [];
+    for (let r = 0; r < currentPiece.shape.length; r++) {
+      for (let c = 0; c < currentPiece.shape[r].length; c++) {
+        if (currentPiece.shape[r][c]) {
+          items.push(
+            <Text
+              key={`g-${r}-${c}`}
+              style={[styles.asciiGlyph, { left: (currentPiece.position.x + c) * CELL, top: (gy + r) * CELL, width: CELL, height: CELL, lineHeight: CELL, fontSize: Math.floor(CELL * 0.9), opacity: 0.25 }]}
+              allowFontScaling={false}
+            >
+              {getGlyphForColor(currentPiece.color)}
+            </Text>
+          );
+        }
+      }
+    }
+    return items;
+  };
+
+  const renderGhostClassic = () => {
+    if (!currentPiece) return null;
+    const gy = ghostY();
+    if (gy <= currentPiece.position.y) return null;
+    const items: any[] = [];
+    for (let r = 0; r < currentPiece.shape.length; r++) {
+      for (let c = 0; c < currentPiece.shape[r].length; c++) {
+        if (currentPiece.shape[r][c]) {
+          items.push(
+            <View key={`gc-${r}-${c}`} style={{ position: 'absolute', left: (currentPiece.position.x + c) * CELL, top: (gy + r) * CELL, width: CELL, height: CELL, borderWidth: StyleSheet.hairlineWidth, borderColor: TERMINAL_DARK_GREEN, opacity: 0.4 }} />
+          );
+        }
+      }
+    }
+    return items;
+  };
+
   const renderGrid = () => {
     const cells: any[] = [];
     for (let row = 0; row < GRID_HEIGHT; row++) {
@@ -469,21 +533,23 @@ export default function TetrisScreen() {
         <View style={styles.playArea}>
           <GestureDetector gesture={composedGesture}>
             <View style={[styles.grid, { width: PLAY_WIDTH, height: PLAY_HEIGHT }]}>
-              {asciiMode ? (
-                <>
-                  {renderAsciiBoard()}
-                  <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-                    {renderGridLines()}
-                  </View>
-                </>
-              ) : (
-                <>
-                  {renderGrid()}
-                  <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-                    {renderGridLines()}
-                  </View>
-                </>
-              )}
+               {asciiMode ? (
+                 <>
+                   {renderAsciiGhost()}
+                   {renderAsciiBoard()}
+                   <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+                     {renderGridLines()}
+                   </View>
+                 </>
+               ) : (
+                 <>
+                   {renderGrid()}
+                   <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+                     {renderGhostClassic()}
+                     {renderGridLines()}
+                   </View>
+                 </>
+               )}
             </View>
           </GestureDetector>
         </View>
