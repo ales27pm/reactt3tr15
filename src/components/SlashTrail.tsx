@@ -37,7 +37,10 @@ export default function SlashTrail({ isActive, initialPoint, registerAddPoint }:
 
   const addPoint = (p: Point) => {
     setTrails(prev => {
-      if (prev.length === 0) return prev;
+      if (prev.length === 0) {
+        // seed a new trail if none exists yet
+        return [{ id: trailId.current++, points: [p] }];
+      }
       const next = [...prev];
       const last = next[next.length - 1];
       const lp = last.points[last.points.length - 1];

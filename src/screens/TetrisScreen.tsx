@@ -158,13 +158,15 @@ export default function TetrisScreen() {
   const pan = Gesture.Pan()
     .onBegin((e) => {
       slashActiveSV.value = 1;
-      runOnJS(startSlash)({ x: e.absoluteX, y: e.absoluteY, timestamp: Date.now() });
+      const p = { x: e.x, y: e.y, timestamp: Date.now() };
+      runOnJS(startSlash)(p);
+      runOnJS(addSlashPointJS)(p);
       accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0;
     })
     .onUpdate((e) => {
       if (pausedSV.value || gameOverSV.value) return;
       // slash trail
-      runOnJS(addSlashPointJS)({ x: e.absoluteX, y: e.absoluteY, timestamp: Date.now() });
+      runOnJS(addSlashPointJS)({ x: e.x, y: e.y, timestamp: Date.now() });
       // movement
       const dx = e.translationX - lastTX.value;
       const dy = e.translationY - lastTY.value;
