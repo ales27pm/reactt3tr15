@@ -62,9 +62,8 @@ export default function SlashTrail({ isActive, initialPoint, registerAddPoint }:
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <Canvas style={StyleSheet.absoluteFill}>
         {trails.map(trail => (
-          <>
+          <React.Fragment key={`trail-${trail.id}`}>
             <Path
-              key={`g-${trail.id}`}
               path={createPath(trail.points)}
               style="stroke"
               strokeWidth={SLASH_WIDTH * 1.8}
@@ -74,7 +73,6 @@ export default function SlashTrail({ isActive, initialPoint, registerAddPoint }:
               opacity={computeOpacity(trail.points) * 0.25}
             />
             <Path
-              key={`m-${trail.id}`}
               path={createPath(trail.points)}
               style="stroke"
               strokeWidth={SLASH_WIDTH}
@@ -83,7 +81,7 @@ export default function SlashTrail({ isActive, initialPoint, registerAddPoint }:
               strokeCap="round"
               opacity={computeOpacity(trail.points)}
             />
-          </>
+          </React.Fragment>
         ))}
       </Canvas>
     </View>
