@@ -99,3 +99,27 @@ export const ghostDropY = (grid: Grid, piece: CurrentPiece): number => {
 export const computeDropDistance = (grid: Grid, piece: CurrentPiece): number => {
   const gy = ghostDropY(grid, piece); return Math.max(0, gy - piece.position.y);
 };
+
+// T‑Spin detection: count occupied of 4 corners around T center
+export const isTSpin = (grid: Grid, piece: CurrentPiece): boolean => {
+  if (piece.type !== "T") return false;
+  // T center coordinate relative to piece shape (always middle of 3x3 for T)
+  // Assume shape is 3x3 with center at (1,1)
+  const cx = piece.position.x + 1;
+  const cy = piece.position.y + 1;
+  const corners = [
+    { x: cx - 1, y: cy - 1 },
+    { x: cx + 1, y: cy - 1 },
+    { x: cx - 1, y: cy + 1 },
+    { x: cx + 1, y: cy + 1 },
+  ];
+  let occupied = 0;
+  for (const p of corners) {
+    if (p.x < 0 || p.x >= GRID_WIDTH || p.y < 0 || p.y >= GRID_HEIGHT) {
+      occupied++;
+    } else if (grid[p.y][p.x]) {
+      occupied++;
+    }
+  }
+  return occupied >= 3;
+};

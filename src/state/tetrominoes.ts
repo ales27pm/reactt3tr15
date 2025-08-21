@@ -134,3 +134,13 @@ export const PIECES: Record<PieceType, Tetromino> = {
 };
 
 export const PIECE_TYPES: PieceType[] = ["I","J","L","O","S","T","Z"];
+
+export const ALT_COLORS: Record<PieceType, string> = {
+  I: "#66CCFF",
+  J: "#3355FF",
+  L: "#FFAA33",
+  O: "#E6E600",
+  S: "#66FF66",
+  T: "#AA66CC",
+  Z: "#FF6666",
+};

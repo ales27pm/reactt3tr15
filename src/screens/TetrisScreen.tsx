@@ -12,7 +12,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, Directions } from "react-native-gesture-handler";
 import { runOnJS, useSharedValue } from "react-native-reanimated";
-import { Ionicons } from "@expo/vector-icons";
 import { useTetrisStore } from "../state/tetrisStore";
 import { PIECES, GRID_WIDTH, GRID_HEIGHT } from "../state/tetrominoes";
 import { ghostDropY } from "../state/engine";
@@ -53,6 +52,9 @@ export default function TetrisScreen() {
   const enableHaptics = useTetrisStore((s) => s.enableHaptics);
   const slashTrailEnabled = useTetrisStore((s) => s.slashTrailEnabled);
   const showHints = useTetrisStore((s) => s.showHints);
+  const dasMs = useTetrisStore((s) => s.dasMs);
+  const arrMs = useTetrisStore((s) => s.arrMs);
+  const colorblindPalette = useTetrisStore((s) => s.colorblindPalette);
 
   const initializeGame = useTetrisStore((s) => s.initializeGame);
   const movePiece = useTetrisStore((s) => s.movePiece);
@@ -69,6 +71,11 @@ export default function TetrisScreen() {
   const toggleHaptics = useTetrisStore((s) => s.toggleHaptics);
   const toggleSlashTrail = useTetrisStore((s) => s.toggleSlashTrail);
   const hideHints = useTetrisStore((s) => s.hideHints);
+  const toggleColorblind = useTetrisStore((s) => s.toggleColorblind);
+  const incDas = useTetrisStore((s) => s.incDas);
+  const decDas = useTetrisStore((s) => s.decDas);
+  const incArr = useTetrisStore((s) => s.incArr);
+  const decArr = useTetrisStore((s) => s.decArr);
 
   // Start
   useEffect(() => {
@@ -167,6 +174,25 @@ export default function TetrisScreen() {
   const lastTX = useSharedValue(0);
   const lastTY = useSharedValue(0);
 
+  // Horizontal auto-repeat (DAS/ARR)
+  const repeatTimeout = useRef<NodeJS.Timeout | null>(null);
+  const repeatInterval = useRef<NodeJS.Timeout | null>(null);
+  const repeatDir = useRef<"left" | "right" | null>(null);
+  const startRepeat = useCallback((dir: "left" | "right") => {
+    if (repeatDir.current === dir && repeatInterval.current) return;
+    if (repeatTimeout.current) { clearTimeout(repeatTimeout.current); repeatTimeout.current = null; }
+    if (repeatInterval.current) { clearInterval(repeatInterval.current); repeatInterval.current = null; }
+    repeatDir.current = dir;
+    repeatTimeout.current = setTimeout(() => {
+      repeatInterval.current = setInterval(() => movePiece(dir), arrMs);
+    }, dasMs);
+  }, [arrMs, dasMs, movePiece]);
+  const stopRepeat = useCallback(() => {
+    repeatDir.current = null;
+    if (repeatTimeout.current) { clearTimeout(repeatTimeout.current); repeatTimeout.current = null; }
+    if (repeatInterval.current) { clearInterval(repeatInterval.current); repeatInterval.current = null; }
+  }, []);
+
   const pan = Gesture.Pan()
     .onBegin((e) => {
       slashActiveSV.value = 1;
@@ -174,6 +200,7 @@ export default function TetrisScreen() {
       runOnJS(startSlash)(p);
       runOnJS(addSlashPointJS)(p);
       accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0;
+      runOnJS(stopRepeat)();
     })
     .onUpdate((e) => {
       if (pausedSV.value || gameOverSV.value) return;
@@ -184,12 +211,12 @@ export default function TetrisScreen() {
       const dy = e.translationY - lastTY.value;
       lastTX.value = e.translationX; lastTY.value = e.translationY;
       accX.value += dx;
-      while (accX.value >= CELL) { runOnJS(movePiece)("right"); accX.value -= CELL; runOnJS(hapticLight)(); }
-      while (accX.value <= -CELL) { runOnJS(movePiece)("left"); accX.value += CELL; runOnJS(hapticLight)(); }
+      while (accX.value >= CELL) { runOnJS(movePiece)("right"); runOnJS(startRepeat)("right"); accX.value -= CELL; runOnJS(hapticLight)(); }
+      while (accX.value <= -CELL) { runOnJS(movePiece)("left"); runOnJS(startRepeat)("left"); accX.value += CELL; runOnJS(hapticLight)(); }
       accY.value += dy;
       while (accY.value >= CELL) { runOnJS(dropPiece)(); runOnJS(hapticLight)(); accY.value -= CELL; }
     })
-    .onEnd(() => { accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0; slashActiveSV.value = 0; runOnJS(stopSlash)(); });
+    .onEnd(() => { accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0; slashActiveSV.value = 0; runOnJS(stopSlash)(); runOnJS(stopRepeat)(); });
 
   const tap = Gesture.Tap()
     .maxDistance(8)
@@ -481,6 +508,17 @@ export default function TetrisScreen() {
             <Pressable style={styles.settingRow} onPress={toggleGhost}><Text style={styles.settingText}>Ghost: {showGhost ? "On" : "Off"}</Text></Pressable>
             <Pressable style={styles.settingRow} onPress={toggleHaptics}><Text style={styles.settingText}>Haptics: {enableHaptics ? "On" : "Off"}</Text></Pressable>
             <Pressable style={styles.settingRow} onPress={toggleSlashTrail}><Text style={styles.settingText}>Slash trail: {slashTrailEnabled ? "On" : "Off"}</Text></Pressable>
+            <Pressable style={styles.settingRow} onPress={toggleColorblind}><Text style={styles.settingText}>Colorblind palette: {colorblindPalette ? "On" : "Off"}</Text></Pressable>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+              <Pressable style={[styles.settingRow, { flex: 1, alignItems: "center" }]} onPress={decDas}><Text style={styles.settingText}>DAS −</Text></Pressable>
+              <View style={[styles.settingRow, { flex: 1, alignItems: "center" }]}><Text style={styles.settingText}>DAS: {dasMs}ms</Text></View>
+              <Pressable style={[styles.settingRow, { flex: 1, alignItems: "center" }]} onPress={incDas}><Text style={styles.settingText}>DAS +</Text></Pressable>
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+              <Pressable style={[styles.settingRow, { flex: 1, alignItems: "center" }]} onPress={decArr}><Text style={styles.settingText}>ARR −</Text></Pressable>
+              <View style={[styles.settingRow, { flex: 1, alignItems: "center" }]}><Text style={styles.settingText}>ARR: {arrMs}ms</Text></View>
+              <Pressable style={[styles.settingRow, { flex: 1, alignItems: "center" }]} onPress={incArr}><Text style={styles.settingText}>ARR +</Text></Pressable>
+            </View>
             <Pressable style={[styles.dropButton, { marginTop: 12 }]} onPress={() => setSettingsVisible(false)}><Text style={styles.buttonText}>Close</Text></Pressable>
           </View>
         </View>

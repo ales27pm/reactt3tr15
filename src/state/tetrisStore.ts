@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { PIECE_TYPES, PieceType } from "./tetrominoes";
+import { PIECE_TYPES, PieceType, ALT_COLORS } from "./tetrominoes";
 import {
   CurrentPiece,
   calculateScore,
@@ -14,6 +14,7 @@ import {
   placePiece,
   rotateShape,
   trySRSRotation,
+  isTSpin,
 } from "./engine";
 
 const LOCK_DELAY_MS = 500;
@@ -47,14 +48,18 @@ interface TetrisState {
   highScore: number;
   asciiMode: boolean;
   combo: number; // successive line clears
-  backToBack: boolean; // last clear was Tetris
+  backToBack: boolean; // last clear was Tetris or T‑Spin
   lockExpireAt: number | null;
+  lastAction: "move" | "rotate";
   // settings
   showGridLines: boolean;
   showGhost: boolean;
   enableHaptics: boolean;
   slashTrailEnabled: boolean;
   showHints: boolean;
+  dasMs: number;
+  arrMs: number;
+  colorblindPalette: boolean;
 }
 
 interface TetrisActions {
@@ -74,6 +79,11 @@ interface TetrisActions {
   toggleHaptics: () => void;
   toggleSlashTrail: () => void;
   hideHints: () => void;
+  toggleColorblind: () => void;
+  incDas: () => void;
+  decDas: () => void;
+  incArr: () => void;
+  decArr: () => void;
 }
 
 export const useTetrisStore = create<TetrisState & TetrisActions>()(
@@ -94,17 +104,22 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
       combo: 0,
       backToBack: false,
       lockExpireAt: null,
+      lastAction: "move",
       // settings defaults
       showGridLines: true,
       showGhost: true,
       enableHaptics: true,
       slashTrailEnabled: true,
       showHints: true,
+      dasMs: 170,
+      arrMs: 30,
+      colorblindPalette: false,
 
       initializeGame: () => {
         const nextQueue = ensureQueue([], 14);
         const first = nextQueue.shift()!;
-        const currentPiece = createPiece(first);
+        let currentPiece = createPiece(first);
+        if (get().colorblindPalette) currentPiece = { ...currentPiece, color: ALT_COLORS[currentPiece.type] };
         set({
           grid: createEmptyGrid(),
           currentPiece,
@@ -130,7 +145,7 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
         if (isValidPosition(grid, currentPiece, nx, currentPiece.position.y)) {
           const np = { ...currentPiece, position: { ...currentPiece.position, x: nx } };
           const onGround = !isValidPosition(grid, np, np.position.x, np.position.y + 1);
-          set({ currentPiece: np, lockExpireAt: onGround ? Date.now() + LOCK_DELAY_MS : null });
+          set({ currentPiece: np, lockExpireAt: onGround ? Date.now() + LOCK_DELAY_MS : null, lastAction: "move" });
         }
       },
 
@@ -143,7 +158,7 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
         if (newPos) {
           const np: CurrentPiece = { ...currentPiece, shape: newShape, position: newPos, rotation: newRot };
           const onGround = !isValidPosition(grid, np, np.position.x, np.position.y + 1);
-          set({ currentPiece: np, lockExpireAt: onGround ? Date.now() + LOCK_DELAY_MS : null });
+          set({ currentPiece: np, lockExpireAt: onGround ? Date.now() + LOCK_DELAY_MS : null, lastAction: "move" });
         }
       },
 
@@ -152,7 +167,7 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
         if (!currentPiece || gameOver || paused) return;
         const ny = currentPiece.position.y + 1;
         if (isValidPosition(grid, currentPiece, currentPiece.position.x, ny)) {
-          set({ currentPiece: { ...currentPiece, position: { ...currentPiece.position, y: ny } }, lockExpireAt: null });
+          set({ currentPiece: { ...currentPiece, position: { ...currentPiece.position, y: ny } }, lockExpireAt: null, lastAction: "move" });
         } else {
           if (lockExpireAt == null) {
             set({ lockExpireAt: Date.now() + LOCK_DELAY_MS });
@@ -173,6 +188,7 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
             currentPiece: { ...currentPiece, position: { ...currentPiece.position, y: ny } },
             score: state.score + 1,
             lockExpireAt: null,
+            lastAction: "move",
           }));
         } else {
           if (get().lockExpireAt == null) set({ lockExpireAt: Date.now() + LOCK_DELAY_MS });
@@ -187,6 +203,7 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
         set((state) => ({
           currentPiece: { ...currentPiece, position: { ...currentPiece.position, y: gy } },
           score: state.score + dist * 2,
+          lastAction: "move",
         }));
         lockAndSpawn();
       },
@@ -202,7 +219,8 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
           incoming = head;
         }
         const newHold = currentPiece.type;
-        const newCurrent = createPiece(incoming);
+        let newCurrent = createPiece(incoming);
+        if (get().colorblindPalette) newCurrent = { ...newCurrent, color: ALT_COLORS[newCurrent.type] };
         if (!isValidPosition(grid, newCurrent, newCurrent.position.x, newCurrent.position.y)) {
           set({ gameOver: true });
           return;
@@ -222,6 +240,11 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
       toggleHaptics: () => set((s) => ({ enableHaptics: !s.enableHaptics })),
       toggleSlashTrail: () => set((s) => ({ slashTrailEnabled: !s.slashTrailEnabled })),
       hideHints: () => set(() => ({ showHints: false })),
+      toggleColorblind: () => set((s) => ({ colorblindPalette: !s.colorblindPalette })),
+      incDas: () => set((s) => ({ dasMs: Math.min(500, s.dasMs + 10) })),
+      decDas: () => set((s) => ({ dasMs: Math.max(50, s.dasMs - 10) })),
+      incArr: () => set((s) => ({ arrMs: Math.min(200, s.arrMs + 5) })),
+      decArr: () => set((s) => ({ arrMs: Math.max(10, s.arrMs - 5) })),
     }),
     {
       name: "tetris-storage",
@@ -234,6 +257,9 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
         enableHaptics: state.enableHaptics,
         slashTrailEnabled: state.slashTrailEnabled,
         showHints: state.showHints,
+        dasMs: state.dasMs,
+        arrMs: state.arrMs,
+        colorblindPalette: state.colorblindPalette,
       }),
     }
   )
@@ -241,28 +267,46 @@ export const useTetrisStore = create<TetrisState & TetrisActions>()(
 
 // Internal helper that reads/writes store state directly
 function lockAndSpawn() {
-  const { grid, currentPiece, lines, level, score, highScore, nextQueue } = useTetrisStore.getState();
+  const { grid, currentPiece, lines, level, score, highScore, nextQueue, lastAction } = useTetrisStore.getState();
   if (!currentPiece) return;
+  // T‑Spin detection before locking
+  const didTSpin = currentPiece.type === "T" && lastAction === "rotate" && isTSpin(grid, currentPiece);
+
   const placed = placePiece(grid, currentPiece);
   const { newGrid, linesCleared } = clearLines(placed);
 
   // scoring
-  let add = calculateScore(linesCleared, level);
   let combo = useTetrisStore.getState().combo;
   let b2b = useTetrisStore.getState().backToBack;
+  let add = 0;
   if (linesCleared > 0) {
     combo = combo + 1;
+    if (didTSpin) {
+      const tSpinBase: Record<number, number> = { 1: 800, 2: 1200, 3: 1600 };
+      add += (tSpinBase[linesCleared] || 0) * (level + 1);
+      if (b2b) add += Math.floor(add * 0.5);
+      b2b = true;
+    } else {
+      add += calculateScore(linesCleared, level);
+      if (linesCleared === 4) {
+        if (b2b) add += Math.floor(add * 0.5);
+        b2b = true;
+      } else {
+        b2b = false;
+      }
+    }
     if (combo > 1) add += (combo - 1) * 50;
-    if (linesCleared === 4) { if (b2b) add += Math.floor(add * 0.5); b2b = true; } else { b2b = false; }
   } else {
     combo = 0;
+    // T‑Spin no lines could optionally score; skipping to keep simple
   }
 
   const newLines = lines + linesCleared;
   const newLevel = Math.floor(newLines / 10);
   let q = ensureQueue(nextQueue, 7);
   const head = q.shift()!;
-  const newCurrent = createPiece(head);
+  let newCurrent = createPiece(head);
+  if (useTetrisStore.getState().colorblindPalette) newCurrent = { ...newCurrent, color: ALT_COLORS[newCurrent.type] };
   const over = !isValidPosition(newGrid, newCurrent, newCurrent.position.x, newCurrent.position.y);
 
   useTetrisStore.setState({

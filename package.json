@@ -9,8 +9,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
-    "github:create": "bash scripts/github.create-repo.sh",
-    "github:push": "bash scripts/github.push.sh"
+    "test": "bun test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
