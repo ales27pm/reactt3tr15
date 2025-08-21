@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, Directions } from "react-native-gesture-handler";
 import { runOnJS, useSharedValue } from "react-native-reanimated";
 import { useTetrisStore } from "../state/tetrisStore";
-import { composeAsciiGrid, composeAsciiPiece, CHAR_ASPECT } from "../utils/ascii";
+import { composeAsciiGrid, composeAsciiPiece, getCharAspect } from "../utils/ascii";
 import MinimalModal from "../components/MinimalModal";
 
 const { width } = Dimensions.get("window");
@@ -280,7 +280,18 @@ export default function TetrisScreen() {
     const shape = PIECES[nextPiece].shape;
     if (asciiMode) {
       const text = composeAsciiPiece(shape, PIECES[nextPiece].color);
-      return <Text style={styles.asciiTextSmall}>{text}</Text>;
+      return (
+        <Text
+          style={[
+            styles.asciiTextSmall,
+            { width: "100%", height: "100%", textAlign: "left", letterSpacing: Platform.OS === "android" ? -0.25 : 0 },
+          ]}
+          allowFontScaling={false}
+          numberOfLines={PIECES[nextPiece].shape.length}
+        >
+          {text}
+        </Text>
+      );
     }
     const cells: any[] = [];
     for (let row = 0; row < shape.length; row++) {
@@ -377,7 +388,7 @@ export default function TetrisScreen() {
   });
   const composedGesture = Gesture.Simultaneous(pan, tap, flingUp, flingDown);
 
-  const asciiFontSize = Math.floor(PLAY_WIDTH / (GRID_WIDTH * CHAR_ASPECT));
+  const asciiFontSize = Math.floor(PLAY_WIDTH / (GRID_WIDTH * getCharAspect()));
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -407,7 +418,11 @@ export default function TetrisScreen() {
                     styles.asciiText,
                     {
                       fontSize: asciiFontSize,
-                      lineHeight: Math.floor(asciiFontSize * 1.05),
+                      lineHeight: CELL,
+                      width: "100%",
+                      height: "100%",
+                      textAlign: "left",
+                      letterSpacing: Platform.OS === "android" ? -0.25 : 0,
                     },
                   ]}
                   allowFontScaling={false}
@@ -538,6 +553,7 @@ const styles = StyleSheet.create({
     position: "relative",
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   nextCell: {
     position: "absolute",
@@ -555,6 +571,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: TERMINAL_GREEN,
     position: "relative",
+    overflow: "hidden",
   },
   cell: {
     width: CELL,

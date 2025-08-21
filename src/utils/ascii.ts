@@ -1,4 +1,8 @@
-export const CHAR_ASPECT = 0.6; // average mono char width / fontSize
+import { Platform } from "react-native";
+export const CHAR_ASPECT = 0.6; // legacy default
+export const CHAR_ASPECT_IOS = 0.6;
+export const CHAR_ASPECT_ANDROID = 0.58;
+export const getCharAspect = () => (Platform.OS === "android" ? CHAR_ASPECT_ANDROID : CHAR_ASPECT_IOS);
 
 type SimplePiece = {
   shape: number[][];
