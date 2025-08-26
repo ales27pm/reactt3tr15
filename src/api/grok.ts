@@ -6,9 +6,11 @@ The Grok API can be communicated with the "openai" package, so you can use the s
 
 grok-3-latest
 grok-3-fast-latest
-grok-3-mini-latest
-*/
-import OpenAI from "openai";
+  grok-3-mini-latest
+  */
+  import OpenAI from "openai";
+
+/* eslint-disable no-console */
 
 export const getGrokClient = () => {
   const apiKey = process.env.EXPO_PUBLIC_VIBECODE_GROK_API_KEY;
