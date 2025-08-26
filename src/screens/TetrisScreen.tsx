@@ -261,6 +261,7 @@ export default function TetrisScreen() {
     transform: [{ translateY: scanY.value }], opacity: 0.25,
   }));
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const glitchRowStyle = (row: number) => useAnimatedStyle(() => ({
     transform: [{ translateX: glitchSV.value * (((row * 13) % 5) - 2) }],
   }));

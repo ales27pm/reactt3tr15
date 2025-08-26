@@ -6,6 +6,8 @@ This endpoint uses openai's latest image generation API, AKA gpt4o, AKA gpt-imag
 Does not support video and audio generation.
 */
 
+/* eslint-disable no-console */
+
 // API endpoint configuration
 const baseUrl = "https://api.vibecodeapp.com";
 const endpoint = "/api/storage/generate-image";
