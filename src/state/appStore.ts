@@ -63,9 +63,10 @@ type AppActions = {
   registerNotificationSchedule: (timestamp: string | null) => void;
   setAnalyticsEnabled: (enabled: boolean) => void;
   setAnalyticsUserId: (userId: string) => void;
+  setHasHydrated: (value: boolean) => void;
 };
 
-export type AppStore = AppState & AppActions;
+export type AppStore = AppState & { hasHydrated: boolean } & AppActions;
 
 const defaultState: AppState = {
   onboarding: {
@@ -90,7 +91,7 @@ const defaultState: AppState = {
     lastScheduledAt: null,
   },
   analytics: {
-    enabled: true,
+    enabled: false,
     userId: null,
   },
 };
@@ -101,6 +102,7 @@ export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
       ...defaultState,
+      hasHydrated: false,
       startOnboarding: () => {
         const startedAt = new Date().toISOString();
         set((state) => ({
@@ -292,6 +294,9 @@ export const useAppStore = create<AppStore>()(
           },
         }));
       },
+      setHasHydrated: (value) => {
+        set({ hasHydrated: value });
+      },
     }),
     {
       name: "app-store",
@@ -303,6 +308,11 @@ export const useAppStore = create<AppStore>()(
         notifications: state.notifications,
         analytics: state.analytics,
       }),
+      onRehydrateStorage: () => (state, error) => {
+        if (!error) {
+          state?.setHasHydrated?.(true);
+        }
+      },
     },
   ),
 );

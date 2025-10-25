@@ -4,9 +4,10 @@ import { Buffer } from "buffer";
 import { logDebug, logError, logInfo, logWarn } from "../utils/logger";
 
 type SegmentPayload = {
-  userId: string;
   event: string;
   properties?: Record<string, unknown>;
+  userId?: string;
+  anonymousId?: string;
 };
 
 type FirebasePayload = {
@@ -55,12 +56,15 @@ const encodeBase64 = (value: string) => {
   return Buffer.from(value, "utf8").toString("base64");
 };
 
-const convertEventNameToFirebase = (name: RetentionEventName) =>
-  name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 40) || "event";
+const convertEventNameToFirebase = (name: RetentionEventName) => {
+  const normalized =
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 40) || "event";
+  return /^[a-z]/.test(normalized) ? normalized : `e_${normalized}`.slice(0, 40);
+};
 
 let cachedUserId: string | null = null;
 
@@ -111,6 +115,9 @@ const sendToSegment = async (payload: SegmentPayload) => {
     return;
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+
   try {
     const response = await fetch("https://api.segment.io/v1/track", {
       method: "POST",
@@ -119,6 +126,7 @@ const sendToSegment = async (payload: SegmentPayload) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -129,6 +137,8 @@ const sendToSegment = async (payload: SegmentPayload) => {
     logDebug(`Segment event sent: ${payload.event}`, { context: "analytics" });
   } catch (error) {
     logError("Segment dispatch failed", { context: "analytics" }, error as Error);
+  } finally {
+    clearTimeout(timeout);
   }
 };
 
@@ -145,7 +155,12 @@ const sendToFirebase = async (payload: FirebasePayload) => {
     firebaseDispatchWarningLogged = true;
   }
 
-  logDebug("Firebase payload skipped", { context: "analytics", measurementId: FIREBASE_MEASUREMENT_ID, payload });
+  logDebug("Firebase payload skipped", {
+    context: "analytics",
+    measurementConfigured: Boolean(FIREBASE_MEASUREMENT_ID),
+    eventCount: payload.events.length,
+    firstEvent: payload.events[0]?.name,
+  });
 };
 
 export const trackRetentionEvent = async ({ name, properties }: RetentionEvent) => {
@@ -154,17 +169,18 @@ export const trackRetentionEvent = async ({ name, properties }: RetentionEvent) 
     return;
   }
 
-  const userId = configuration.userId ?? (await resolveUserId());
+  const resolvedUserId = await resolveUserId();
+  const configuredUserId = configuration.userId ?? undefined;
   const timestamp_micros = Date.now() * 1000;
 
   const segmentPayload: SegmentPayload = {
-    userId,
     event: name,
     properties,
+    ...(configuredUserId ? { userId: configuredUserId } : { anonymousId: resolvedUserId }),
   };
 
   const firebasePayload: FirebasePayload = {
-    client_id: userId,
+    client_id: resolvedUserId,
     timestamp_micros,
     events: [
       {

@@ -13,10 +13,15 @@ export const AppNavigator = () => {
   const onboardingCompleted = useAppStore((state) => state.onboarding.completed);
   const analyticsEnabled = useAppStore((state) => state.analytics.enabled);
   const userId = useAppStore((state) => state.analytics.userId);
+  const hasHydrated = useAppStore((state) => state.hasHydrated);
 
   const prevEnabledRef = useRef<boolean | null>(null);
 
   useEffect(() => {
+    if (!hasHydrated) {
+      return;
+    }
+
     const prevEnabled = prevEnabledRef.current;
 
     if (prevEnabled === null) {
@@ -40,11 +45,15 @@ export const AppNavigator = () => {
     if (userId) {
       configureAnalytics({ userId });
     }
-  }, [analyticsEnabled, userId]);
+  }, [analyticsEnabled, userId, hasHydrated]);
 
   useEffect(() => {
+    if (!hasHydrated) {
+      return;
+    }
+
     logInfo(`Onboarding completed: ${onboardingCompleted}`, { context: "navigation" });
-  }, [onboardingCompleted]);
+  }, [onboardingCompleted, hasHydrated]);
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
