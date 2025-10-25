@@ -66,6 +66,7 @@ const OnboardingPermissionsScreen = ({ navigation }: OnboardingPermissionsScreen
             }
           }}
           accessibilityRole="switch"
+          testID="onboarding-permissions-toggle"
         />
       </View>
       {error && <Text style={styles.error}>{error}</Text>}
@@ -73,6 +74,7 @@ const OnboardingPermissionsScreen = ({ navigation }: OnboardingPermissionsScreen
         style={styles.primaryButton}
         onPress={() => handleContinue(notificationsEnabled)}
         accessibilityRole="button"
+        testID="onboarding-permissions-continue"
       >
         <Text style={styles.primaryButtonLabel}>Continue</Text>
       </Pressable>
@@ -82,6 +84,7 @@ const OnboardingPermissionsScreen = ({ navigation }: OnboardingPermissionsScreen
           setNotificationsEnabled(false);
           void handleContinue(false);
         }}
+        testID="onboarding-permissions-skip"
       >
         <Text style={styles.secondaryButtonLabel}>Skip for now</Text>
       </Pressable>

@@ -1,4 +1,3 @@
-import { describe, it, expect } from "bun:test";
 import { createEmptyGrid, clearLines, createPiece, isValidPosition, computeDropDistance } from "../../state/engine";
 import { GRID_WIDTH, GRID_HEIGHT } from "../../state/tetrominoes";
 

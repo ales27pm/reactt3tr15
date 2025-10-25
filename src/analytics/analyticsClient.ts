@@ -74,9 +74,12 @@ const resolveUserId = async () => {
   }
 
   try {
-    if (Platform.OS === "android" && Application.androidId) {
-      cachedUserId = `android-${Application.androidId}`;
-      return cachedUserId;
+    if (Platform.OS === "android") {
+      const androidId = Application.getAndroidId();
+      if (androidId) {
+        cachedUserId = `android-${androidId}`;
+        return cachedUserId;
+      }
     }
 
     if (Platform.OS === "ios") {
@@ -155,12 +158,15 @@ const sendToFirebase = async (payload: FirebasePayload) => {
     firebaseDispatchWarningLogged = true;
   }
 
-  logDebug("Firebase payload skipped", {
-    context: "analytics",
-    measurementConfigured: Boolean(FIREBASE_MEASUREMENT_ID),
-    eventCount: payload.events.length,
-    firstEvent: payload.events[0]?.name,
-  });
+  logDebug(
+    "Firebase payload skipped",
+    { context: "analytics" },
+    {
+      measurementConfigured: Boolean(FIREBASE_MEASUREMENT_ID),
+      eventCount: payload.events.length,
+      firstEvent: payload.events[0]?.name,
+    },
+  );
 };
 
 export const trackRetentionEvent = async ({ name, properties }: RetentionEvent) => {

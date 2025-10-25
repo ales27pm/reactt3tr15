@@ -6,8 +6,11 @@ import { trackRetentionEvent } from "../analytics/analyticsClient";
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: false,
     shouldPlaySound: false,
     shouldSetBadge: false,
+    priority: Notifications.AndroidNotificationPriority.DEFAULT,
   }),
 });
 
@@ -55,9 +58,9 @@ const configureTrigger = (schedule: NotificationSchedule): Notifications.DailyTr
   const hour = Math.min(23, Math.max(0, schedule.hour | 0));
   const minute = Math.min(59, Math.max(0, schedule.minute | 0));
   return {
+    type: Notifications.SchedulableTriggerInputTypes.DAILY,
     hour,
     minute,
-    repeats: true,
   };
 };
 

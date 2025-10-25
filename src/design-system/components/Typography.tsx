@@ -1,6 +1,5 @@
 import React, { forwardRef } from "react";
 import { Text, TextProps } from "react-native";
-import { styled } from "nativewind";
 import clsx from "clsx";
 
 import { TypographyVariant } from "../tokens";
@@ -41,8 +40,6 @@ export interface TypographyProps extends TextProps {
   className?: string;
 }
 
-const StyledText = styled(Text);
-
 export const resolveTypographyClasses = (
   variant: TypographyVariant,
   weight: TypographyWeight,
@@ -51,9 +48,9 @@ export const resolveTypographyClasses = (
 
 export const Typography = forwardRef<Text, TypographyProps>(
   ({ variant = "body", weight = "regular", color = "default", className, children, ...props }, ref) => (
-    <StyledText ref={ref} className={clsx(resolveTypographyClasses(variant, weight, color), className)} {...props}>
+    <Text ref={ref} className={clsx(resolveTypographyClasses(variant, weight, color), className)} {...props}>
       {children}
-    </StyledText>
+    </Text>
   ),
 );
 

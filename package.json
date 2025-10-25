@@ -11,6 +11,10 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "jest",
+    "test:e2e:ios": "detox test --configuration ios.sim.release",
+    "test:e2e:android": "detox test --configuration android.emu.release",
+    "detox:build:ios": "detox build --configuration ios.sim.release",
+    "detox:build:android": "detox build --configuration android.emu.release",
     "push:github": "bash scripts/github.push.sh"
   },
   "dependencies": {
@@ -113,6 +117,7 @@
     "react-native-vision-camera": "^4.6.4",
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
+    "sentry-expo": "^7.2.0",
     "tailwind-merge": "^3.2.0",
     "tailwindcss": "^3.4.17",
     "uuid": "^11.1.0",
@@ -125,9 +130,11 @@
     "@testing-library/jest-native": "^5.4.3",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.0.10",
+    "@types/react-test-renderer": "^19.1.0",
     "@typescript-eslint/eslint-plugin": "^8.29.1",
     "@typescript-eslint/parser": "^8.29.1",
     "babel-plugin-module-resolver": "^5.0.2",
+    "detox": "^20.44.0",
     "es-abstract": "^1.24.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
@@ -137,6 +144,7 @@
     "jest-expo": "^53.0.2",
     "react-native-worklets": "^0.6.1",
     "react-test-renderer": "19.0.0",
+    "ts-jest": "^29.4.5",
     "typescript": "~5.8.3"
   },
   "private": true,

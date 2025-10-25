@@ -35,7 +35,12 @@ const OnboardingTutorialScreen = () => {
         <Text style={styles.tipText}>• Hard drop with a double tap.</Text>
         <Text style={styles.tipText}>• Keep streaks alive to earn rare rewards.</Text>
       </View>
-      <Pressable style={styles.primaryButton} onPress={handleFinish} accessibilityRole="button">
+      <Pressable
+        style={styles.primaryButton}
+        onPress={handleFinish}
+        accessibilityRole="button"
+        testID="onboarding-tutorial-finish"
+      >
         <Text style={styles.primaryButtonLabel}>Start Playing</Text>
       </Pressable>
     </View>

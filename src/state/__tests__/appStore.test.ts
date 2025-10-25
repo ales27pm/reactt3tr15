@@ -9,7 +9,15 @@ jest.mock("../../analytics/analyticsClient", () => ({
 describe("appStore", () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    useAppStore.setState(getDefaultAppState(), true);
+    const current = useAppStore.getState();
+    useAppStore.setState(
+      {
+        ...current,
+        ...getDefaultAppState(),
+        hasHydrated: false,
+      },
+      true,
+    );
     (trackRetentionEvent as jest.Mock).mockClear();
   });
 

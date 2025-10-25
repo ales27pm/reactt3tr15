@@ -48,7 +48,7 @@ describe("Network service fallbacks", () => {
     getIpAddressMock.mockResolvedValue("192.168.1.24");
 
     await expect(getCurrentNetwork()).resolves.toEqual({
-      ssid: null,
+      ssid: "unknown",
       security: "unknown",
       interfaceName: "wifi",
       ipAddress: "192.168.1.24",
