@@ -37,11 +37,19 @@ async function fallbackCurrentNetwork(): Promise<CurrentNetworkInfo | null> {
 async function fallbackVpnStatus(): Promise<VpnStatus> {
   try {
     const state = await Network.getNetworkStateAsync();
-    return {
+    const status: VpnStatus = {
       active: Boolean(state?.type === Network.NetworkStateType.VPN),
-      type: state?.type ?? undefined,
-      hasRoute: state?.isInternetReachable ?? false,
     };
+
+    if (state?.type) {
+      status.type = state.type;
+    }
+
+    if (state?.isInternetReachable != null) {
+      status.hasRoute = Boolean(state.isInternetReachable);
+    }
+
+    return status;
   } catch (error) {
     logError(`${LOG_TAG} Failed to resolve fallback VPN status`, { context: "network-service" }, error);
     return { active: false };
@@ -65,7 +73,7 @@ export async function scanWifiNetworks(): Promise<WifiNetwork[]> {
     return await nativeModule.scanWifiNetworks();
   } catch (error) {
     logError(`${LOG_TAG} Native scan failed`, { context: "network-service" }, error);
-    return [];
+    throw error;
   }
 }
 
@@ -99,7 +107,7 @@ export async function getVpnStatus(): Promise<VpnStatus> {
     return await nativeModule.getVpnStatus();
   } catch (error) {
     logError(`${LOG_TAG} Native VPN status lookup failed`, { context: "network-service" }, error);
-    return fallbackVpnStatus();
+    return { active: false };
   }
 }
 

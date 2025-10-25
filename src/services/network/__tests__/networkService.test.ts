@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 jest.mock("../nativeModule", () => ({
   getNativeNetworkModule: jest.fn(),
 }));
@@ -157,10 +159,7 @@ describe("Network service native path", () => {
       nativeInstance.scanWifiNetworks.mockRejectedValueOnce(error);
 
       await expect(scanWifiNetworks()).rejects.toThrow("Native scanWifiNetworks failed");
-      expect(console.error).toHaveBeenCalledWith(
-        expect.stringContaining("[NetworkService] Native scan failed"),
-        error,
-      );
+      expect(console.error).toHaveBeenCalledWith(expect.stringContaining("[NetworkService] Native scan failed"), error);
     });
 
     it("propagates errors from getCurrentNetwork and logs them", async () => {
@@ -189,9 +188,7 @@ describe("Network service native path", () => {
       const error = new Error("Native startPacketCapture failed");
       nativeInstance.startPacketCapture.mockRejectedValueOnce(error);
 
-      await expect(startPacketCapture({ interfaceName: "wlan0" })).rejects.toThrow(
-        "Native startPacketCapture failed",
-      );
+      await expect(startPacketCapture({ interfaceName: "wlan0" })).rejects.toThrow("Native startPacketCapture failed");
       expect(console.error).toHaveBeenCalledWith(
         expect.stringContaining("[NetworkService] Failed to start packet capture"),
         error,
