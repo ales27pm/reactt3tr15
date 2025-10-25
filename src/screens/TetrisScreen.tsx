@@ -8,10 +8,18 @@ import {
   Vibration,
   Platform,
   PixelRatio,
+  ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, Directions } from "react-native-gesture-handler";
-import Animated, { runOnJS, useSharedValue, useAnimatedStyle, withTiming, Easing } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  type AnimatedStyleProp,
+} from "react-native-reanimated";
 import { useTetrisStore } from "../state/tetrisStore";
 import { PIECES, GRID_WIDTH, GRID_HEIGHT } from "../state/tetrominoes";
 import { ghostDropY } from "../state/engine";
@@ -59,7 +67,6 @@ export default function TetrisScreen() {
   const enableSfx = useTetrisStore((s) => s.enableSfx);
   const matrixRainEnabled = useTetrisStore((s) => s.matrixRainEnabled);
   const glitchFxEnabled = useTetrisStore((s) => s.glitchFxEnabled);
-
 
   const initializeGame = useTetrisStore((s) => s.initializeGame);
   const movePiece = useTetrisStore((s) => s.movePiece);
@@ -132,7 +139,7 @@ export default function TetrisScreen() {
         if (enableSfx) playSfx("move");
       }
     },
-    [gameOver, paused, movePiece, enableSfx]
+    [gameOver, paused, movePiece, enableSfx],
   );
 
   const handleRotate = useCallback(() => {
@@ -144,7 +151,10 @@ export default function TetrisScreen() {
   }, [gameOver, paused, rotatePiece, enableSfx]);
 
   const handleDrop = useCallback(() => {
-    if (!gameOver && !paused) { dropPiece(); if (enableSfx) playSfx("soft"); }
+    if (!gameOver && !paused) {
+      dropPiece();
+      if (enableSfx) playSfx("soft");
+    }
   }, [gameOver, paused, dropPiece, enableSfx]);
 
   const handleHardDrop = useCallback(() => {
@@ -156,9 +166,15 @@ export default function TetrisScreen() {
   }, [gameOver, paused, hardDrop, enableSfx]);
 
   // Haptics helpers (called from JS via runOnJS)
-  const hapticLight = () => { if (enableHaptics && Platform.OS === "ios") Vibration.vibrate(8); };
-  const hapticMedium = () => { if (enableHaptics && Platform.OS === "ios") Vibration.vibrate(10); };
-  const hapticStrong = () => { if (enableHaptics && Platform.OS === "ios") Vibration.vibrate(50); };
+  const hapticLight = () => {
+    if (enableHaptics && Platform.OS === "ios") Vibration.vibrate(8);
+  };
+  const hapticMedium = () => {
+    if (enableHaptics && Platform.OS === "ios") Vibration.vibrate(10);
+  };
+  const hapticStrong = () => {
+    if (enableHaptics && Platform.OS === "ios") Vibration.vibrate(50);
+  };
 
   // Shared flags to avoid worklet reading React state directly
   const pausedSV = useSharedValue(paused ? 1 : 0);
@@ -169,10 +185,20 @@ export default function TetrisScreen() {
   const glitchSV = useSharedValue(0);
   const scanY = useSharedValue(-20);
   const headerBlink = useSharedValue(0);
-  useEffect(() => { headerBlink.value = withTiming(1, { duration: 600, easing: Easing.linear }, () => { headerBlink.value = 0; }); });
-  useEffect(() => { pausedSV.value = paused ? 1 : 0; }, [paused]);
-  useEffect(() => { gameOverSV.value = gameOver ? 1 : 0; }, [gameOver]);
-  useEffect(() => { setSfxEnabled(enableSfx); }, [enableSfx]);
+  useEffect(() => {
+    headerBlink.value = withTiming(1, { duration: 600, easing: Easing.linear }, () => {
+      headerBlink.value = 0;
+    });
+  }, [headerBlink]);
+  useEffect(() => {
+    pausedSV.value = paused ? 1 : 0;
+  }, [paused, pausedSV]);
+  useEffect(() => {
+    gameOverSV.value = gameOver ? 1 : 0;
+  }, [gameOver, gameOverSV]);
+  useEffect(() => {
+    setSfxEnabled(enableSfx);
+  }, [enableSfx]);
   useEffect(() => {
     if (lastClearedRows && lastClearedRows.length > 0) {
       lineFlash.value = 1;
@@ -181,7 +207,7 @@ export default function TetrisScreen() {
       glitchSV.value = withTiming(0, { duration: 220, easing: Easing.out(Easing.quad) });
       if (enableSfx) playSfx("line");
     }
-  }, [lastClearedRows, enableSfx]);
+  }, [lastClearedRows, enableSfx, glitchSV, lineFlash]);
   useEffect(() => {
     if (lastLockAt) {
       borderPulse.value = 1;
@@ -190,17 +216,29 @@ export default function TetrisScreen() {
       scanY.value = withTiming(PLAY_HEIGHT + 40, { duration: 220, easing: Easing.out(Easing.cubic) });
       if (enableSfx) playSfx("lock");
     }
-  }, [lastLockAt, enableSfx]);
-  useEffect(() => { if (gameOver && enableSfx) playSfx("gameover"); }, [gameOver, enableSfx]);
+  }, [lastLockAt, enableSfx, borderPulse, scanY]);
+  useEffect(() => {
+    if (gameOver && enableSfx) playSfx("gameover");
+  }, [gameOver, enableSfx]);
 
   // Slash trail state and registration
   const [isSlashActive, setIsSlashActive] = useState(false);
   const slashInitialPoint = useRef<SlashPoint | null>(null);
   const addSlashPointRef = useRef<((p: SlashPoint) => void) | null>(null);
-  const registerAddPoint = useCallback((fn: (p: SlashPoint) => void) => { addSlashPointRef.current = fn; }, []);
-  const startSlash = useCallback((p: SlashPoint) => { setIsSlashActive(true); slashInitialPoint.current = p; }, []);
-  const stopSlash = useCallback(() => { setIsSlashActive(false); slashInitialPoint.current = null; }, []);
-  const addSlashPointJS = useCallback((p: SlashPoint) => { addSlashPointRef.current?.(p); }, []);
+  const registerAddPoint = useCallback((fn: (p: SlashPoint) => void) => {
+    addSlashPointRef.current = fn;
+  }, []);
+  const startSlash = useCallback((p: SlashPoint) => {
+    setIsSlashActive(true);
+    slashInitialPoint.current = p;
+  }, []);
+  const stopSlash = useCallback(() => {
+    setIsSlashActive(false);
+    slashInitialPoint.current = null;
+  }, []);
+  const addSlashPointJS = useCallback((p: SlashPoint) => {
+    addSlashPointRef.current?.(p);
+  }, []);
 
   // Gestures
   const accX = useSharedValue(0);
@@ -214,7 +252,10 @@ export default function TetrisScreen() {
       const p = { x: e.x, y: e.y, timestamp: Date.now() };
       runOnJS(startSlash)(p);
       runOnJS(addSlashPointJS)(p);
-      accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0;
+      accX.value = 0;
+      accY.value = 0;
+      lastTX.value = 0;
+      lastTY.value = 0;
     })
     .onUpdate((e) => {
       if (pausedSV.value || gameOverSV.value) return;
@@ -223,26 +264,60 @@ export default function TetrisScreen() {
       // movement
       const dx = e.translationX - lastTX.value;
       const dy = e.translationY - lastTY.value;
-      lastTX.value = e.translationX; lastTY.value = e.translationY;
+      lastTX.value = e.translationX;
+      lastTY.value = e.translationY;
       accX.value += dx;
-      while (accX.value >= CELL) { runOnJS(movePiece)("right"); accX.value -= CELL; runOnJS(hapticLight)(); runOnJS(playSfx)("move"); }
-      while (accX.value <= -CELL) { runOnJS(movePiece)("left"); accX.value += CELL; runOnJS(hapticLight)(); runOnJS(playSfx)("move"); }
+      while (accX.value >= CELL) {
+        runOnJS(movePiece)("right");
+        accX.value -= CELL;
+        runOnJS(hapticLight)();
+        runOnJS(playSfx)("move");
+      }
+      while (accX.value <= -CELL) {
+        runOnJS(movePiece)("left");
+        accX.value += CELL;
+        runOnJS(hapticLight)();
+        runOnJS(playSfx)("move");
+      }
       accY.value += dy;
-      while (accY.value >= CELL) { runOnJS(dropPiece)(); runOnJS(hapticLight)(); runOnJS(playSfx)("soft"); accY.value -= CELL; }
+      while (accY.value >= CELL) {
+        runOnJS(dropPiece)();
+        runOnJS(hapticLight)();
+        runOnJS(playSfx)("soft");
+        accY.value -= CELL;
+      }
     })
-    .onEnd(() => { accX.value = 0; accY.value = 0; lastTX.value = 0; lastTY.value = 0; slashActiveSV.value = 0; runOnJS(stopSlash)(); });
+    .onEnd(() => {
+      accX.value = 0;
+      accY.value = 0;
+      lastTX.value = 0;
+      lastTY.value = 0;
+      slashActiveSV.value = 0;
+      runOnJS(stopSlash)();
+    });
 
   const tap = Gesture.Tap()
     .maxDistance(8)
     .onEnd(() => {
-      if (pausedSV.value || gameOverSV.value || slashActiveSV.value) return; runOnJS(rotatePiece)(); runOnJS(hapticMedium)(); runOnJS(playSfx)("rotate");
+      if (pausedSV.value || gameOverSV.value || slashActiveSV.value) return;
+      runOnJS(rotatePiece)();
+      runOnJS(hapticMedium)();
+      runOnJS(playSfx)("rotate");
     });
-  const flingUp = Gesture.Fling().direction(Directions.UP).onEnd(() => {
-    if (pausedSV.value || gameOverSV.value) return; runOnJS(hardDrop)(); runOnJS(hapticStrong)();
-  });
-  const flingDown = Gesture.Fling().direction(Directions.DOWN).onEnd(() => {
-    if (pausedSV.value || gameOverSV.value) return; runOnJS(dropPiece)(); runOnJS(hapticLight)();
-  });
+  const flingUp = Gesture.Fling()
+    .direction(Directions.UP)
+    .onEnd(() => {
+      if (pausedSV.value || gameOverSV.value) return;
+      runOnJS(hardDrop)();
+      runOnJS(hapticStrong)();
+    });
+  const flingDown = Gesture.Fling()
+    .direction(Directions.DOWN)
+    .onEnd(() => {
+      if (pausedSV.value || gameOverSV.value) return;
+      runOnJS(dropPiece)();
+      runOnJS(hapticLight)();
+    });
 
   tap.requireExternalGestureToFail(pan, flingUp, flingDown);
 
@@ -258,11 +333,8 @@ export default function TetrisScreen() {
   const lineFlashStyle = useAnimatedStyle(() => ({ opacity: lineFlash.value * 0.7 }));
 
   const scanlineStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: scanY.value }], opacity: 0.25,
-  }));
-
-  const glitchRowStyle = (row: number) => useAnimatedStyle(() => ({
-    transform: [{ translateX: glitchSV.value * (((row * 13) % 5) - 2) }],
+    transform: [{ translateY: scanY.value }],
+    opacity: 0.25,
   }));
 
   const renderAsciiGhost = () => {
@@ -276,11 +348,22 @@ export default function TetrisScreen() {
           items.push(
             <Text
               key={`g-${r}-${c}`}
-              style={[styles.asciiGlyph, { left: (currentPiece.position.x + c) * CELL, top: (gy + r) * CELL, width: CELL, height: CELL, lineHeight: CELL, fontSize: Math.floor(CELL * 0.9), opacity: 0.25 }]}
+              style={[
+                styles.asciiGlyph,
+                {
+                  left: (currentPiece.position.x + c) * CELL,
+                  top: (gy + r) * CELL,
+                  width: CELL,
+                  height: CELL,
+                  lineHeight: CELL,
+                  fontSize: Math.floor(CELL * 0.9),
+                  opacity: 0.25,
+                },
+              ]}
               allowFontScaling={false}
             >
               {getGlyphForColor(currentPiece.color, currentPiece.position.x + c, gy + r)}
-            </Text>
+            </Text>,
           );
         }
       }
@@ -297,7 +380,19 @@ export default function TetrisScreen() {
       for (let c = 0; c < currentPiece.shape[r].length; c++) {
         if (currentPiece.shape[r][c]) {
           items.push(
-            <View key={`gc-${r}-${c}`} style={{ position: "absolute", left: (currentPiece.position.x + c) * CELL, top: (gy + r) * CELL, width: CELL, height: CELL, borderWidth: StyleSheet.hairlineWidth, borderColor: TERMINAL_DARK_GREEN, opacity: 0.4 }} />
+            <View
+              key={`gc-${r}-${c}`}
+              style={{
+                position: "absolute",
+                left: (currentPiece.position.x + c) * CELL,
+                top: (gy + r) * CELL,
+                width: CELL,
+                height: CELL,
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: TERMINAL_DARK_GREEN,
+                opacity: 0.4,
+              }}
+            />,
           );
         }
       }
@@ -316,27 +411,55 @@ export default function TetrisScreen() {
           row < currentPiece.position.y + currentPiece.shape.length &&
           col >= currentPiece.position.x &&
           col < currentPiece.position.x + currentPiece.shape[0].length &&
-          currentPiece.shape[row - currentPiece.position.y]?.[
-            col - currentPiece.position.x
-          ];
+          currentPiece.shape[row - currentPiece.position.y]?.[col - currentPiece.position.x];
         cells.push(
           <View
             key={`${row}-${col}`}
             style={[
               styles.cell,
               {
-                backgroundColor: isCurrentPiece
-                  ? currentPiece.color
-                  : cellValue
-                  ? cellValue
-                  : TERMINAL_BG,
+                backgroundColor: isCurrentPiece ? currentPiece.color : cellValue ? cellValue : TERMINAL_BG,
               },
             ]}
-          />
+          />,
         );
       }
     }
     return cells;
+  };
+
+  type GlitchRowOverlayProps = {
+    row: number;
+    glitchSV: Animated.SharedValue<number>;
+    lineFlashStyle: AnimatedStyleProp<ViewStyle>;
+    glitchFxEnabled: boolean;
+  };
+
+  const GlitchRowOverlay = ({ row, glitchSV, lineFlashStyle, glitchFxEnabled }: GlitchRowOverlayProps) => {
+    const rowStyle = useAnimatedStyle(
+      () => ({
+        transform: [{ translateX: glitchSV.value * (((row * 13) % 5) - 2) }],
+      }),
+      [glitchSV, row],
+    );
+
+    return (
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: "absolute",
+            left: 0,
+            top: row * CELL,
+            width: PLAY_WIDTH,
+            height: CELL,
+            backgroundColor: TERMINAL_GREEN,
+          },
+          lineFlashStyle,
+          glitchFxEnabled ? rowStyle : null,
+        ]}
+      />
+    );
   };
 
   const renderAsciiBoard = () => {
@@ -360,12 +483,19 @@ export default function TetrisScreen() {
               key={`a-${y}-${x}`}
               style={[
                 styles.asciiGlyph,
-                { left: x * CELL, top: y * CELL, width: CELL, height: CELL, lineHeight: CELL, fontSize: Math.floor(CELL * 0.9) },
+                {
+                  left: x * CELL,
+                  top: y * CELL,
+                  width: CELL,
+                  height: CELL,
+                  lineHeight: CELL,
+                  fontSize: Math.floor(CELL * 0.9),
+                },
               ]}
               allowFontScaling={false}
             >
               {getGlyphForColor(glyphColor, x, y)}
-            </Text>
+            </Text>,
           );
         }
       }
@@ -398,9 +528,23 @@ export default function TetrisScreen() {
         for (let c = 0; c < shape[r].length; c++) {
           if (shape[r][c]) {
             items.push(
-              <Text key={`mini-${type}-${r}-${c}`} style={[styles.asciiGlyph, { left: c * mini, top: r * mini, width: mini, height: mini, lineHeight: mini, fontSize: Math.floor(mini * 0.9) }]} allowFontScaling={false}>
+              <Text
+                key={`mini-${type}-${r}-${c}`}
+                style={[
+                  styles.asciiGlyph,
+                  {
+                    left: c * mini,
+                    top: r * mini,
+                    width: mini,
+                    height: mini,
+                    lineHeight: mini,
+                    fontSize: Math.floor(mini * 0.9),
+                  },
+                ]}
+                allowFontScaling={false}
+              >
                 {glyph}
-              </Text>
+              </Text>,
             );
           }
         }
@@ -412,7 +556,13 @@ export default function TetrisScreen() {
       for (let c = 0; c < shape[r].length; c++) {
         if (shape[r][c]) {
           cells.push(
-            <View key={`mini-${type}-${r}-${c}`} style={[styles.nextCell, { backgroundColor: PIECES[type].color, left: c * (BLOCK_SIZE * scale), top: r * (BLOCK_SIZE * scale) }]} />
+            <View
+              key={`mini-${type}-${r}-${c}`}
+              style={[
+                styles.nextCell,
+                { backgroundColor: PIECES[type].color, left: c * (BLOCK_SIZE * scale), top: r * (BLOCK_SIZE * scale) },
+              ]}
+            />,
           );
         }
       }
@@ -444,7 +594,7 @@ export default function TetrisScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }] }>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.title}>TETRIS</Text>
         <View style={styles.stats}>
@@ -463,7 +613,7 @@ export default function TetrisScreen() {
         <View style={styles.playArea}>
           {matrixRainEnabled && <MatrixRain />}
           <GestureDetector gesture={composedGesture}>
-            <Animated.View style={[styles.grid, gridAnimatedStyle, { width: PLAY_WIDTH, height: PLAY_HEIGHT }] }>
+            <Animated.View style={[styles.grid, gridAnimatedStyle, { width: PLAY_WIDTH, height: PLAY_HEIGHT }]}>
               {asciiMode ? (
                 <>
                   {showGhost && renderAsciiGhost()}
@@ -481,10 +631,22 @@ export default function TetrisScreen() {
                   </View>
                 </>
               )}
-              {lastClearedRows?.map((r: number) => (
-                <Animated.View key={`clr-${r}`} style={[{ position: "absolute", left: 0, top: r * CELL, width: PLAY_WIDTH, height: CELL, backgroundColor: TERMINAL_GREEN }, lineFlashStyle, glitchFxEnabled ? glitchRowStyle(r) : null]} />
+              {lastClearedRows?.map((row: number) => (
+                <GlitchRowOverlay
+                  key={`clr-${row}`}
+                  row={row}
+                  glitchSV={glitchSV}
+                  lineFlashStyle={lineFlashStyle}
+                  glitchFxEnabled={glitchFxEnabled}
+                />
               ))}
-              <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, width: PLAY_WIDTH, height: 18, backgroundColor: TERMINAL_GREEN }, scanlineStyle]} />
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  { position: "absolute", left: 0, width: PLAY_WIDTH, height: 18, backgroundColor: TERMINAL_GREEN },
+                  scanlineStyle,
+                ]}
+              />
               {slashTrailEnabled && (
                 <SlashTrail
                   isActive={isSlashActive}
@@ -497,23 +659,40 @@ export default function TetrisScreen() {
         </View>
 
         <View style={styles.rightPanel}>
-          <Pressable style={({pressed}) => [styles.controlButton, pressed && { opacity: 0.85 }]} onPress={pauseGame}>
+          <Pressable style={({ pressed }) => [styles.controlButton, pressed && { opacity: 0.85 }]} onPress={pauseGame}>
             <Text style={styles.buttonText}>{paused ? "RESUME" : "PAUSE"}</Text>
           </Pressable>
 
-          <Pressable style={({pressed}) => [styles.controlButton, pressed && { opacity: 0.85 }]} onPress={resetGame}>
+          <Pressable style={({ pressed }) => [styles.controlButton, pressed && { opacity: 0.85 }]} onPress={resetGame}>
             <Text style={styles.buttonText}>RESET</Text>
           </Pressable>
 
-          <Pressable style={({pressed}) => [styles.controlButton, pressed && { opacity: 0.85 }]} onPress={toggleAsciiMode}>
+          <Pressable
+            style={({ pressed }) => [styles.controlButton, pressed && { opacity: 0.85 }]}
+            onPress={toggleAsciiMode}
+          >
             <Text style={styles.buttonText}>{asciiMode ? "ASCII ON" : "ASCII OFF"}</Text>
           </Pressable>
 
-          <Pressable style={({pressed}) => [styles.controlButton, { opacity: canHold ? 1 : 0.5 }, pressed && { opacity: 0.85 }]} onPress={() => { holdSwap(); if (enableSfx) playSfx("hold"); }} disabled={!canHold}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.controlButton,
+              { opacity: canHold ? 1 : 0.5 },
+              pressed && { opacity: 0.85 },
+            ]}
+            onPress={() => {
+              holdSwap();
+              if (enableSfx) playSfx("hold");
+            }}
+            disabled={!canHold}
+          >
             <Text style={styles.buttonText}>HOLD</Text>
           </Pressable>
 
-          <Pressable style={({pressed}) => [styles.controlButton, pressed && { opacity: 0.85 }]} onPress={() => setSettingsVisible(true)}>
+          <Pressable
+            style={({ pressed }) => [styles.controlButton, pressed && { opacity: 0.85 }]}
+            onPress={() => setSettingsVisible(true)}
+          >
             <Text style={styles.buttonText}>SETTINGS</Text>
           </Pressable>
         </View>
@@ -521,8 +700,10 @@ export default function TetrisScreen() {
 
       {showHints && (
         <View style={styles.hintsOverlay}>
-          <Text style={styles.hintText}>Tap = Rotate   ↑ fling = Hard drop   ↓ fling = Soft   Pan = Move</Text>
-          <Pressable onPress={hideHints} style={styles.hintDismiss}><Text style={styles.hintDismissText}>×</Text></Pressable>
+          <Text style={styles.hintText}>Tap = Rotate ↑ fling = Hard drop ↓ fling = Soft Pan = Move</Text>
+          <Pressable onPress={hideHints} style={styles.hintDismiss}>
+            <Text style={styles.hintDismissText}>×</Text>
+          </Pressable>
         </View>
       )}
 
@@ -540,28 +721,62 @@ export default function TetrisScreen() {
         <View style={styles.settingsBackdrop}>
           <View style={styles.settingsPanel}>
             <Text style={styles.settingsTitle}>Settings</Text>
-            <Pressable style={styles.settingRow} onPress={toggleGridLines}><Text style={styles.settingText}>Grid lines: {showGridLines ? "On" : "Off"}</Text></Pressable>
-            <Pressable style={styles.settingRow} onPress={toggleGhost}><Text style={styles.settingText}>Ghost: {showGhost ? "On" : "Off"}</Text></Pressable>
-            <Pressable style={styles.settingRow} onPress={toggleHaptics}><Text style={styles.settingText}>Haptics: {enableHaptics ? "On" : "Off"}</Text></Pressable>
-            <Pressable style={styles.settingRow} onPress={toggleSlashTrail}><Text style={styles.settingText}>Slash trail: {slashTrailEnabled ? "On" : "Off"}</Text></Pressable>
-            <Pressable style={styles.settingRow} onPress={toggleSfx}><Text style={styles.settingText}>SFX: {enableSfx ? "On" : "Off"}</Text></Pressable>
-            <Pressable style={styles.settingRow} onPress={toggleMatrixRain}><Text style={styles.settingText}>Matrix rain: {matrixRainEnabled ? "On" : "Off"}</Text></Pressable>
-            <Pressable style={styles.settingRow} onPress={toggleGlitchFx}><Text style={styles.settingText}>Glitch FX: {glitchFxEnabled ? "On" : "Off"}</Text></Pressable>
-            <View style={[styles.settingRow, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
+            <Pressable style={styles.settingRow} onPress={toggleGridLines}>
+              <Text style={styles.settingText}>Grid lines: {showGridLines ? "On" : "Off"}</Text>
+            </Pressable>
+            <Pressable style={styles.settingRow} onPress={toggleGhost}>
+              <Text style={styles.settingText}>Ghost: {showGhost ? "On" : "Off"}</Text>
+            </Pressable>
+            <Pressable style={styles.settingRow} onPress={toggleHaptics}>
+              <Text style={styles.settingText}>Haptics: {enableHaptics ? "On" : "Off"}</Text>
+            </Pressable>
+            <Pressable style={styles.settingRow} onPress={toggleSlashTrail}>
+              <Text style={styles.settingText}>Slash trail: {slashTrailEnabled ? "On" : "Off"}</Text>
+            </Pressable>
+            <Pressable style={styles.settingRow} onPress={toggleSfx}>
+              <Text style={styles.settingText}>SFX: {enableSfx ? "On" : "Off"}</Text>
+            </Pressable>
+            <Pressable style={styles.settingRow} onPress={toggleMatrixRain}>
+              <Text style={styles.settingText}>Matrix rain: {matrixRainEnabled ? "On" : "Off"}</Text>
+            </Pressable>
+            <Pressable style={styles.settingRow} onPress={toggleGlitchFx}>
+              <Text style={styles.settingText}>Glitch FX: {glitchFxEnabled ? "On" : "Off"}</Text>
+            </Pressable>
+            <View
+              style={[
+                styles.settingRow,
+                { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+              ]}
+            >
               <Text style={styles.settingText}>DAS: {useTetrisStore.getState().dasMs} ms</Text>
               <View style={{ flexDirection: "row", gap: 10 }}>
-                <Pressable style={styles.controlButton} onPress={() => setDas(useTetrisStore.getState().dasMs - 10)}><Text style={styles.buttonText}>-</Text></Pressable>
-                <Pressable style={styles.controlButton} onPress={() => setDas(useTetrisStore.getState().dasMs + 10)}><Text style={styles.buttonText}>+</Text></Pressable>
+                <Pressable style={styles.controlButton} onPress={() => setDas(useTetrisStore.getState().dasMs - 10)}>
+                  <Text style={styles.buttonText}>-</Text>
+                </Pressable>
+                <Pressable style={styles.controlButton} onPress={() => setDas(useTetrisStore.getState().dasMs + 10)}>
+                  <Text style={styles.buttonText}>+</Text>
+                </Pressable>
               </View>
             </View>
-            <View style={[styles.settingRow, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
+            <View
+              style={[
+                styles.settingRow,
+                { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+              ]}
+            >
               <Text style={styles.settingText}>ARR: {useTetrisStore.getState().arrMs} ms</Text>
               <View style={{ flexDirection: "row", gap: 10 }}>
-                <Pressable style={styles.controlButton} onPress={() => setArr(useTetrisStore.getState().arrMs - 5)}><Text style={styles.buttonText}>-</Text></Pressable>
-                <Pressable style={styles.controlButton} onPress={() => setArr(useTetrisStore.getState().arrMs + 5)}><Text style={styles.buttonText}>+</Text></Pressable>
+                <Pressable style={styles.controlButton} onPress={() => setArr(useTetrisStore.getState().arrMs - 5)}>
+                  <Text style={styles.buttonText}>-</Text>
+                </Pressable>
+                <Pressable style={styles.controlButton} onPress={() => setArr(useTetrisStore.getState().arrMs + 5)}>
+                  <Text style={styles.buttonText}>+</Text>
+                </Pressable>
               </View>
             </View>
-            <Pressable style={[styles.dropButton, { marginTop: 12 }]} onPress={() => setSettingsVisible(false)}><Text style={styles.buttonText}>Close</Text></Pressable>
+            <Pressable style={[styles.dropButton, { marginTop: 12 }]} onPress={() => setSettingsVisible(false)}>
+              <Text style={styles.buttonText}>Close</Text>
+            </Pressable>
           </View>
         </View>
       )}
@@ -579,21 +794,30 @@ export default function TetrisScreen() {
 
       <View style={styles.controls}>
         <View style={styles.controlRow}>
-          <Pressable style={({pressed}) => [styles.moveButton, pressed && { opacity: 0.85 }]} onPress={() => handleMove("left")}>
+          <Pressable
+            style={({ pressed }) => [styles.moveButton, pressed && { opacity: 0.85 }]}
+            onPress={() => handleMove("left")}
+          >
             <Text style={styles.buttonText}>←</Text>
           </Pressable>
-          <Pressable style={({pressed}) => [styles.moveButton, pressed && { opacity: 0.85 }]} onPress={handleRotate}>
+          <Pressable style={({ pressed }) => [styles.moveButton, pressed && { opacity: 0.85 }]} onPress={handleRotate}>
             <Text style={styles.buttonText}>↻</Text>
           </Pressable>
-          <Pressable style={({pressed}) => [styles.moveButton, pressed && { opacity: 0.85 }]} onPress={() => handleMove("right")}>
+          <Pressable
+            style={({ pressed }) => [styles.moveButton, pressed && { opacity: 0.85 }]}
+            onPress={() => handleMove("right")}
+          >
             <Text style={styles.buttonText}>→</Text>
           </Pressable>
         </View>
         <View style={styles.controlRow}>
-          <Pressable style={({pressed}) => [styles.dropButton, pressed && { opacity: 0.85 }]} onPress={handleDrop}>
+          <Pressable style={({ pressed }) => [styles.dropButton, pressed && { opacity: 0.85 }]} onPress={handleDrop}>
             <Text style={styles.buttonText}>SOFT DROP</Text>
           </Pressable>
-          <Pressable style={({pressed}) => [styles.dropButton, pressed && { opacity: 0.85 }]} onPress={handleHardDrop}>
+          <Pressable
+            style={({ pressed }) => [styles.dropButton, pressed && { opacity: 0.85 }]}
+            onPress={handleHardDrop}
+          >
             <Text style={styles.buttonText}>HARD DROP</Text>
           </Pressable>
         </View>
@@ -612,36 +836,176 @@ const styles = StyleSheet.create({
   leftPanel: { alignItems: "center" },
   nextPieceContainer: { alignItems: "center" },
   nextTitle: { color: TERMINAL_GREEN, fontSize: 16, fontWeight: "bold", marginBottom: 10 },
-  nextPieceBox: { width: BLOCK_SIZE * 4 * 0.6, height: BLOCK_SIZE * 4 * 0.6, borderWidth: 2, borderColor: TERMINAL_GREEN, position: "relative", alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  nextCell: { position: "absolute", width: BLOCK_SIZE * 0.6, height: BLOCK_SIZE * 0.6, borderWidth: 1, borderColor: TERMINAL_DARK_GREEN },
+  nextPieceBox: {
+    width: BLOCK_SIZE * 4 * 0.6,
+    height: BLOCK_SIZE * 4 * 0.6,
+    borderWidth: 2,
+    borderColor: TERMINAL_GREEN,
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  nextCell: {
+    position: "absolute",
+    width: BLOCK_SIZE * 0.6,
+    height: BLOCK_SIZE * 0.6,
+    borderWidth: 1,
+    borderColor: TERMINAL_DARK_GREEN,
+  },
   playArea: { alignItems: "center" },
-  grid: { flexDirection: "row", flexWrap: "wrap", borderWidth: 2, borderColor: TERMINAL_GREEN, position: "relative", overflow: "hidden", shadowColor: TERMINAL_GREEN, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    borderWidth: 2,
+    borderColor: TERMINAL_GREEN,
+    position: "relative",
+    overflow: "hidden",
+    shadowColor: TERMINAL_GREEN,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+  },
   cell: { width: CELL, height: CELL },
   rightPanel: { gap: 10 },
-  controlButton: { backgroundColor: TERMINAL_DARK_GREEN, paddingHorizontal: 15, paddingVertical: 10, borderRadius: 5, borderWidth: 1, borderColor: TERMINAL_GREEN },
+  controlButton: {
+    backgroundColor: TERMINAL_DARK_GREEN,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: TERMINAL_GREEN,
+  },
   controls: { position: "absolute", bottom: 50, gap: 15 },
   controlRow: { flexDirection: "row", gap: 15, justifyContent: "center" },
-  moveButton: { backgroundColor: TERMINAL_DARK_GREEN, width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: TERMINAL_GREEN },
-  dropButton: { backgroundColor: TERMINAL_DARK_GREEN, paddingHorizontal: 20, paddingVertical: 15, borderRadius: 10, borderWidth: 2, borderColor: TERMINAL_GREEN },
+  moveButton: {
+    backgroundColor: TERMINAL_DARK_GREEN,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: TERMINAL_GREEN,
+  },
+  dropButton: {
+    backgroundColor: TERMINAL_DARK_GREEN,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: TERMINAL_GREEN,
+  },
   buttonText: { color: TERMINAL_GREEN, fontSize: 16, fontWeight: "bold" },
-  gameOverOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0, 0, 0, 0.8)", justifyContent: "center", alignItems: "center", gap: 20 },
+  gameOverOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 20,
+  },
   gameOverText: { color: TERMINAL_GREEN, fontSize: 48, fontWeight: "bold" },
   finalScore: { color: TERMINAL_GREEN, fontSize: 24 },
-  restartButton: { backgroundColor: TERMINAL_DARK_GREEN, paddingHorizontal: 30, paddingVertical: 15, borderRadius: 10, borderWidth: 2, borderColor: TERMINAL_GREEN },
-  asciiText: { color: "#79F28A", fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }), textShadowColor: "#00FF00", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6 },
-  asciiTextSmall: { color: "#79F28A", fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }), fontSize: Math.floor(BLOCK_SIZE * 0.6), lineHeight: Math.floor(BLOCK_SIZE * 0.6 * 1.05), textShadowColor: "#00FF00", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 4, textAlign: "center" },
-  asciiGlyph: { position: "absolute", color: "#79F28A", fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }), textShadowColor: "#00FF00", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6, textAlign: "center" },
-  gridLineV: { position: "absolute", top: 0, width: StyleSheet.hairlineWidth, backgroundColor: TERMINAL_DARK_GREEN, opacity: 0.6 },
-  gridLineH: { position: "absolute", left: 0, height: StyleSheet.hairlineWidth, backgroundColor: TERMINAL_DARK_GREEN, opacity: 0.6 },
+  restartButton: {
+    backgroundColor: TERMINAL_DARK_GREEN,
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: TERMINAL_GREEN,
+  },
+  asciiText: {
+    color: "#79F28A",
+    fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
+    textShadowColor: "#00FF00",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+  },
+  asciiTextSmall: {
+    color: "#79F28A",
+    fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
+    fontSize: Math.floor(BLOCK_SIZE * 0.6),
+    lineHeight: Math.floor(BLOCK_SIZE * 0.6 * 1.05),
+    textShadowColor: "#00FF00",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
+    textAlign: "center",
+  },
+  asciiGlyph: {
+    position: "absolute",
+    color: "#79F28A",
+    fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
+    textShadowColor: "#00FF00",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+    textAlign: "center",
+  },
+  gridLineV: {
+    position: "absolute",
+    top: 0,
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: TERMINAL_DARK_GREEN,
+    opacity: 0.6,
+  },
+  gridLineH: {
+    position: "absolute",
+    left: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: TERMINAL_DARK_GREEN,
+    opacity: 0.6,
+  },
 
   // UX additions
-  hintsOverlay: { position: "absolute", top: 10, right: 10, backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: TERMINAL_GREEN, flexDirection: "row", alignItems: "center", gap: 8 },
+  hintsOverlay: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: TERMINAL_GREEN,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   hintText: { color: TERMINAL_GREEN, fontSize: 12 },
-  hintDismiss: { marginLeft: 8, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: TERMINAL_GREEN, borderRadius: 6 },
+  hintDismiss: {
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: TERMINAL_GREEN,
+    borderRadius: 6,
+  },
   hintDismissText: { color: TERMINAL_GREEN, fontSize: 14 },
-  settingsBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" },
-  settingsPanel: { width: 280, backgroundColor: "#000", borderWidth: 2, borderColor: TERMINAL_GREEN, borderRadius: 12, padding: 16, gap: 8 },
+  settingsBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  settingsPanel: {
+    width: 280,
+    backgroundColor: "#000",
+    borderWidth: 2,
+    borderColor: TERMINAL_GREEN,
+    borderRadius: 12,
+    padding: 16,
+    gap: 8,
+  },
   settingsTitle: { color: TERMINAL_GREEN, fontSize: 18, fontWeight: "bold", marginBottom: 6 },
-  settingRow: { paddingVertical: 8, paddingHorizontal: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: TERMINAL_DARK_GREEN, borderRadius: 8 },
+  settingRow: {
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: TERMINAL_DARK_GREEN,
+    borderRadius: 8,
+  },
   settingText: { color: TERMINAL_GREEN, fontSize: 14 },
 });

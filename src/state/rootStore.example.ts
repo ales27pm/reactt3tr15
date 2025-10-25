@@ -10,7 +10,7 @@ interface RootStore {}
 // Make sure to persist the store using the persist middleware.
 const useRootStore = create<RootStore>()(
   persist(
-    (set, get) => ({
+    (_set, _get) => ({
       // add your Zustand store here
       // someData: 0,
       // addSomeData: () => set({ someData: get().someData + 1 }),

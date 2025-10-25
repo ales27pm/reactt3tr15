@@ -1,3 +1,5 @@
+import { logError } from "./logger";
+
 export type ApiErrorCode =
   | "network"
   | "rate_limit"
@@ -34,11 +36,7 @@ export const mapApiError = (error: any, provider?: string): TypedApiError => {
   try {
     const status = error?.status || error?.response?.status;
     const msg: string =
-      error?.message ||
-      error?.response?.data?.error?.message ||
-      error?.response?.data?.message ||
-      error?.error ||
-      "";
+      error?.message || error?.response?.data?.error?.message || error?.response?.data?.message || error?.error || "";
 
     // Network or fetch TypeError
     if (error?.name === "TypeError" || msg?.toLowerCase().includes("network") || !navigator?.onLine) {
@@ -114,7 +112,8 @@ export const mapApiError = (error: any, provider?: string): TypedApiError => {
       provider,
       retryable: true,
     });
-  } catch (_e) {
+  } catch (unknownError) {
+    logError("Failed to normalize provider error", { context: "api-errors" }, unknownError);
     return toApiError({
       code: "unknown",
       title: "Unexpected error",

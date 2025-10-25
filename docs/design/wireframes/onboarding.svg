@@ -1,0 +1,44 @@
+<svg width="1440" height="1024" viewBox="0 0 1440 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Onboarding Flow Wireframe</title>
+  <desc id="desc">Three-step onboarding sequence showing welcome, permissions, and baseline capture screens.</desc>
+  <rect width="1440" height="1024" fill="#F8FAFC" />
+  <g font-family="Inter, Arial, sans-serif" fill="#0F172A">
+    <text x="72" y="96" font-size="32" font-weight="600">ReactT3tr15 — Onboarding</text>
+  </g>
+  <g transform="translate(72, 160)">
+    <rect width="384" height="704" rx="32" fill="#FFFFFF" stroke="#CBD5F5" stroke-width="2" />
+    <text x="32" y="72" font-size="24" font-weight="600">Step 1 · Welcome</text>
+    <rect x="32" y="112" width="320" height="200" rx="24" fill="#EEF2FF" />
+    <text x="32" y="352" font-size="18" font-weight="500">Diagnose Wi-Fi integrity in minutes.</text>
+    <text x="32" y="388" font-size="16" fill="#475569">Tap continue to set up secure baselines.</text>
+    <rect x="32" y="432" width="320" height="64" rx="16" fill="#1D4ED8" />
+    <text x="72" y="472" font-size="18" font-weight="600" fill="#FFFFFF">Continue</text>
+    <text x="32" y="520" font-size="14" fill="#64748B">Progress · 1 / 3</text>
+  </g>
+  <g transform="translate(528, 160)">
+    <rect width="384" height="704" rx="32" fill="#FFFFFF" stroke="#CBD5F5" stroke-width="2" />
+    <text x="32" y="72" font-size="24" font-weight="600">Step 2 · Permissions</text>
+    <rect x="32" y="112" width="320" height="88" rx="24" fill="#F1F5F9" stroke="#E2E8F0" />
+    <text x="52" y="158" font-size="16" font-weight="600">Local Network</text>
+    <text x="52" y="186" font-size="14" fill="#475569">Required to enumerate Wi-Fi interfaces securely.</text>
+    <rect x="32" y="224" width="320" height="88" rx="24" fill="#F1F5F9" stroke="#E2E8F0" />
+    <text x="52" y="270" font-size="16" font-weight="600">Notifications</text>
+    <text x="52" y="298" font-size="14" fill="#475569">Used for remediation nudges and SLA alerts.</text>
+    <rect x="32" y="432" width="320" height="64" rx="16" fill="#0EA5E9" />
+    <text x="66" y="472" font-size="18" font-weight="600" fill="#FFFFFF">Grant & Continue</text>
+    <text x="32" y="520" font-size="14" fill="#64748B">Progress · 2 / 3</text>
+  </g>
+  <g transform="translate(984, 160)">
+    <rect width="384" height="704" rx="32" fill="#FFFFFF" stroke="#CBD5F5" stroke-width="2" />
+    <text x="32" y="72" font-size="24" font-weight="600">Step 3 · Baseline Capture</text>
+    <rect x="32" y="120" width="320" height="64" rx="20" fill="#DBEAFE" />
+    <text x="48" y="160" font-size="16" font-weight="600">Live Capture · 92% complete</text>
+    <rect x="32" y="208" width="320" height="160" rx="24" fill="#EFF6FF" />
+    <text x="52" y="248" font-size="20" font-weight="600">SSID · LabNet</text>
+    <text x="52" y="280" font-size="16" fill="#475569">Noise floor: -78 dBm</text>
+    <text x="52" y="308" font-size="16" fill="#475569">Channel Utilisation: 42%</text>
+    <rect x="32" y="400" width="320" height="64" rx="16" fill="#1D4ED8" />
+    <text x="76" y="440" font-size="18" font-weight="600" fill="#FFFFFF">Finish Setup</text>
+    <text x="32" y="520" font-size="14" fill="#64748B">Progress · 3 / 3</text>
+  </g>
+</svg>

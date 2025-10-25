@@ -15,6 +15,7 @@ options: {
 If you need to generate many assets, REFACTOR THIS SCRIPT TO CONCURRENTLY GENERATE UP TO 3 ASSETS AT A TIME. If you do not, the bash tool may time out.
 use npx tsx generate-asset-script.ts to run this script.
 */
+/* eslint-disable no-console */
 
 import { generateImage } from "./src/api/image-generation";
 import * as fs from "fs";
