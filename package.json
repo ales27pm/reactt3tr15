@@ -128,6 +128,7 @@
     "@types/jest": "^29.5.14",
     "@types/react": "~19.0.10",
     "babel-plugin-module-resolver": "^5.0.2",
+    "es-abstract": "^1.24.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
     "eslint-plugin-react": "^7.37.5",
