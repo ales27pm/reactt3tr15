@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAppStore } from "../state/appStore";
 import { configureAnalytics, trackRetentionEvent } from "../analytics/analyticsClient";
@@ -14,11 +14,32 @@ export const AppNavigator = () => {
   const analyticsEnabled = useAppStore((state) => state.analytics.enabled);
   const userId = useAppStore((state) => state.analytics.userId);
 
+  const prevEnabledRef = useRef<boolean | null>(null);
+
   useEffect(() => {
-    configureAnalytics({ enabled: analyticsEnabled, userId: userId ?? undefined });
-    void trackRetentionEvent({
-      name: analyticsEnabled ? "Analytics Opt-In" : "Analytics Opt-Out",
-    });
+    const prevEnabled = prevEnabledRef.current;
+
+    if (prevEnabled === null) {
+      prevEnabledRef.current = analyticsEnabled;
+      configureAnalytics({ enabled: analyticsEnabled, userId: userId ?? undefined });
+      return;
+    }
+
+    if (prevEnabled !== analyticsEnabled) {
+      if (!analyticsEnabled) {
+        void trackRetentionEvent({ name: "Analytics Opt-Out" });
+        configureAnalytics({ enabled: false, userId: userId ?? undefined });
+      } else {
+        configureAnalytics({ enabled: true, userId: userId ?? undefined });
+        void trackRetentionEvent({ name: "Analytics Opt-In" });
+      }
+      prevEnabledRef.current = analyticsEnabled;
+      return;
+    }
+
+    if (userId) {
+      configureAnalytics({ userId });
+    }
   }, [analyticsEnabled, userId]);
 
   useEffect(() => {

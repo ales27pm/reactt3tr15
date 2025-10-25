@@ -51,12 +51,26 @@ const rewardDefinitions: RewardDefinition[] = [
     points: 650,
     once: true,
     condition: (state) => {
-      if (state.session.recentSessions.length < 5) {
+      const dates = state.session.recentSessions
+        .map((isoDate) => parseISO(isoDate))
+        .filter((date) => !Number.isNaN(date.getTime()))
+        .sort((a, b) => a.getTime() - b.getTime());
+
+      if (dates.length < 5) {
         return false;
       }
-      const first = parseISO(state.session.recentSessions[0]);
-      const last = parseISO(state.session.recentSessions[state.session.recentSessions.length - 1]);
-      return differenceInCalendarDays(last, first) <= 6;
+
+      let left = 0;
+      for (let right = 0; right < dates.length; right += 1) {
+        while (differenceInCalendarDays(dates[right], dates[left]) > 6) {
+          left += 1;
+        }
+        if (right - left + 1 >= 5) {
+          return true;
+        }
+      }
+
+      return false;
     },
   },
 ];
@@ -64,6 +78,7 @@ const rewardDefinitions: RewardDefinition[] = [
 export const evaluateRewards = (state: AppState, existingRewards: Reward[]): Reward[] => {
   const existingIds = new Set(existingRewards.map((reward) => reward.id));
   const unlocked: Reward[] = [];
+  const nowIso = new Date().toISOString();
 
   rewardDefinitions.forEach((definition) => {
     if (definition.once && existingIds.has(definition.id)) {
@@ -76,7 +91,7 @@ export const evaluateRewards = (state: AppState, existingRewards: Reward[]): Rew
         title: definition.title,
         description: definition.description,
         points: definition.points,
-        earnedAt: new Date().toISOString(),
+        earnedAt: nowIso,
       };
       existingIds.add(reward.id);
       unlocked.push(reward);

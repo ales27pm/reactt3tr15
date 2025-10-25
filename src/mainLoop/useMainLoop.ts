@@ -42,12 +42,14 @@ export const useMainLoop = (): SessionLifecycleHook => {
 
   useEffect(() => {
     const subscription = RNAppState.addEventListener("change", (status) => {
-      if (status !== "active") {
+      if (status === "active") {
+        beginSession();
+      } else {
         endSession("background");
       }
     });
     return () => subscription.remove();
-  }, [endSession]);
+  }, [beginSession, endSession]);
 
   useEffect(() => {
     beginSession();

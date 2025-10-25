@@ -28,7 +28,8 @@ export type RetentionEventName =
   | "Notification Scheduled"
   | "Notification Opt-Out"
   | "Analytics Opt-In"
-  | "Analytics Opt-Out";
+  | "Analytics Opt-Out"
+  | "Analytics Error";
 
 export type RetentionEvent = {
   name: RetentionEventName;
@@ -41,12 +42,11 @@ type AnalyticsConfiguration = {
 };
 
 let configuration: AnalyticsConfiguration = {
-  enabled: true,
+  enabled: false,
 };
 
 const SEGMENT_WRITE_KEY = process.env.EXPO_PUBLIC_SEGMENT_WRITE_KEY;
 const FIREBASE_MEASUREMENT_ID = process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID;
-const FIREBASE_API_SECRET = process.env.EXPO_PUBLIC_FIREBASE_API_SECRET;
 
 const encodeBase64 = (value: string) => {
   if (typeof globalThis.btoa === "function") {
@@ -132,31 +132,20 @@ const sendToSegment = async (payload: SegmentPayload) => {
   }
 };
 
+let firebaseDispatchWarningLogged = false;
+
 const sendToFirebase = async (payload: FirebasePayload) => {
-  if (!FIREBASE_MEASUREMENT_ID || !FIREBASE_API_SECRET) {
-    logDebug("Firebase credentials not provided; skipping", { context: "analytics" });
+  if (!FIREBASE_MEASUREMENT_ID) {
+    logDebug("Firebase measurement ID not provided; skipping", { context: "analytics" });
     return;
   }
 
-  try {
-    const url = `https://www.google-analytics.com/mp/collect?measurement_id=${FIREBASE_MEASUREMENT_ID}&api_secret=${FIREBASE_API_SECRET}`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Firebase error: ${response.status} ${errorText}`);
-    }
-
-    logDebug(`Firebase event sent: ${payload.events[0]?.name ?? "unknown"}`, { context: "analytics" });
-  } catch (error) {
-    logError("Firebase dispatch failed", { context: "analytics" }, error as Error);
+  if (!firebaseDispatchWarningLogged) {
+    logInfo("Firebase dispatch disabled; configure a secure proxy to enable", { context: "analytics" });
+    firebaseDispatchWarningLogged = true;
   }
+
+  logDebug("Firebase payload skipped", { context: "analytics", measurementId: FIREBASE_MEASUREMENT_ID, payload });
 };
 
 export const trackRetentionEvent = async ({ name, properties }: RetentionEvent) => {
@@ -191,7 +180,7 @@ export const trackRetentionEvent = async ({ name, properties }: RetentionEvent) 
 export const trackRetentionError = async (error: Error, context: string) => {
   logError(error.message, { context: `analytics:${context}` }, error);
   await trackRetentionEvent({
-    name: "Notification Opt-Out",
+    name: "Analytics Error",
     properties: {
       context,
       message: error.message,

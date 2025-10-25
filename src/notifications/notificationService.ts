@@ -42,17 +42,24 @@ export const cancelScheduledReminders = async () => {
   const schedules = await Notifications.getAllScheduledNotificationsAsync();
   await Promise.all(
     schedules
-      .filter((notification) => notification.identifier === REMINDER_IDENTIFIER)
+      .filter((notification) => {
+        const reminderTag = (notification.content as Notifications.NotificationContent | undefined)?.data?.reminderTag;
+        return reminderTag === REMINDER_IDENTIFIER;
+      })
       .map((notification) => Notifications.cancelScheduledNotificationAsync(notification.identifier)),
   );
   logDebug("Cleared scheduled reminders", { context: "notifications" });
 };
 
-const configureTrigger = (schedule: NotificationSchedule): Notifications.DailyTriggerInput => ({
-  hour: schedule.hour,
-  minute: schedule.minute,
-  repeats: true,
-});
+const configureTrigger = (schedule: NotificationSchedule): Notifications.DailyTriggerInput => {
+  const hour = Math.min(23, Math.max(0, schedule.hour | 0));
+  const minute = Math.min(59, Math.max(0, schedule.minute | 0));
+  return {
+    hour,
+    minute,
+    repeats: true,
+  };
+};
 
 export const scheduleDailyReminder = async (schedule: NotificationSchedule) => {
   const hasPermission = await requestNotificationPermissions();
@@ -63,11 +70,11 @@ export const scheduleDailyReminder = async (schedule: NotificationSchedule) => {
   await cancelScheduledReminders();
 
   const identifier = await Notifications.scheduleNotificationAsync({
-    identifier: REMINDER_IDENTIFIER,
     content: {
       title: "Time to drop blocks!",
       body: "Keep your streak alive by finishing a round today.",
       sound: Platform.OS === "ios" ? undefined : "default",
+      data: { reminderTag: REMINDER_IDENTIFIER },
     },
     trigger: configureTrigger(schedule),
   });

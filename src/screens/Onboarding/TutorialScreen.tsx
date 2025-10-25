@@ -1,17 +1,25 @@
+import { useEffect } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useOnboardingJourney } from "../../onboarding/hooks/useOnboardingJourney";
 import { useAppNavigation } from "../../navigation/hooks";
+import { useAppStore } from "../../state/appStore";
 
 const OnboardingTutorialScreen = () => {
   const { goToNext } = useOnboardingJourney();
   const navigation = useAppNavigation<"Main">();
+  const onboardingCompleted = useAppStore((state) => state.onboarding.completed);
+
+  useEffect(() => {
+    if (onboardingCompleted) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Main" }],
+      });
+    }
+  }, [navigation, onboardingCompleted]);
 
   const handleFinish = () => {
     goToNext();
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Main" }],
-    });
   };
 
   return (
