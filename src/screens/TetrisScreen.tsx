@@ -28,6 +28,7 @@ import MinimalModal from "../components/MinimalModal";
 import SlashTrail, { Point as SlashPoint } from "../components/SlashTrail";
 import { playSfx, setSfxEnabled } from "../utils/sfx";
 import MatrixRain from "../components/MatrixRain";
+import { useMainLoop } from "../mainLoop/useMainLoop";
 
 const { width } = Dimensions.get("window");
 const BLOCK_SIZE = Math.min(width * 0.05, 20);
@@ -88,6 +89,7 @@ export default function TetrisScreen() {
   const setDas = useTetrisStore((s) => s.setDas);
   const setArr = useTetrisStore((s) => s.setArr);
   const hideHints = useTetrisStore((s) => s.hideHints);
+  const { sessionCount, streak } = useMainLoop();
 
   // Start
   useEffect(() => {
@@ -601,6 +603,8 @@ export default function TetrisScreen() {
           <Text style={styles.statText}>Score: {score}</Text>
           <Text style={styles.statText}>Level: {level}</Text>
           <Text style={styles.statText}>Lines: {lines}</Text>
+          <Text style={styles.statText}>Sessions: {sessionCount}</Text>
+          <Text style={styles.statText}>Streak: {streak}</Text>
         </View>
       </View>
 

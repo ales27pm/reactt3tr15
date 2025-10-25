@@ -2,7 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import TetrisScreen from "./src/screens/TetrisScreen";
+import AppNavigator from "./src/navigation/AppNavigator";
 
 /*
 IMPORTANT NOTICE: DO NOT REMOVE
@@ -30,7 +30,7 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <NavigationContainer>
-          <TetrisScreen />
+          <AppNavigator />
           <StatusBar style="light" />
         </NavigationContainer>
       </SafeAreaProvider>
