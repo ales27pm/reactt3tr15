@@ -15,7 +15,8 @@
     "test:e2e:android": "detox test --configuration android.emu.release",
     "detox:build:ios": "detox build --configuration ios.sim.release",
     "detox:build:android": "detox build --configuration android.emu.release",
-    "push:github": "bash scripts/github.push.sh"
+    "push:github": "bash scripts/github.push.sh",
+    "agent:sync": "node scripts/manage-agents.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
