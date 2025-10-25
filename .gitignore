@@ -34,8 +34,24 @@ yarn-error.*
 *.tsbuildinfo
 
 # iOS & Android
-ios/
-android/
+ios/*
+!ios/NetworkDiagnostics/
+!ios/NetworkDiagnostics/**
+android/*
+!android/app/
+android/app/*
+!android/app/src/
+android/app/src/*
+!android/app/src/main/
+android/app/src/main/*
+!android/app/src/main/java/
+android/app/src/main/java/*
+!android/app/src/main/java/com/
+android/app/src/main/java/com/*
+!android/app/src/main/java/com/vibecode/
+android/app/src/main/java/com/vibecode/*
+!android/app/src/main/java/com/vibecode/network/
+!android/app/src/main/java/com/vibecode/network/**
 
 # Local secrets for GitHub pushes only
 .specialenv/
