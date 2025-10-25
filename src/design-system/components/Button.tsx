@@ -1,7 +1,6 @@
-import React, { forwardRef, useMemo } from "react";
+import React, { forwardRef, useCallback, useMemo } from "react";
 import { ActivityIndicator, Pressable, PressableProps, View } from "react-native";
 import Animated from "react-native-reanimated";
-import { styled } from "nativewind";
 import clsx from "clsx";
 
 import { ButtonSize, ButtonVariant, palette } from "../tokens";
@@ -20,9 +19,17 @@ export interface ButtonProps extends Omit<PressableProps, "children"> {
   className?: string;
 }
 
-const AnimatedPressable = styled(Animated.createAnimatedComponent(Pressable));
+type AnimatedPressableComponentProps = React.ComponentPropsWithRef<typeof Pressable> & {
+  className?: string;
+};
 
-export const Button = forwardRef<Pressable, ButtonProps>(
+const AnimatedPressable = Animated.createAnimatedComponent(
+  Pressable,
+) as React.ComponentType<AnimatedPressableComponentProps>;
+
+type PressableComponentRef = React.ElementRef<typeof Pressable>;
+
+export const Button = forwardRef<PressableComponentRef, ButtonProps>(
   (
     {
       label,
@@ -55,25 +62,47 @@ export const Button = forwardRef<Pressable, ButtonProps>(
 
     const isDisabled = disabled || loading;
 
+    const pressableStyle = useMemo<PressableProps["style"]>(() => {
+      if (typeof style === "function") {
+        return (state) => {
+          const resolved = style(state);
+          return [animatedStyle, resolved];
+        };
+      }
+      return [animatedStyle, style];
+    }, [animatedStyle, style]);
+
+    type PressableEvent = Parameters<NonNullable<PressableProps["onPressIn"]>>[0];
+
+    const handleInternalPressIn = useCallback(
+      (event: PressableEvent) => {
+        if (!isDisabled) {
+          handlePressIn();
+        }
+        onPressIn?.(event);
+      },
+      [handlePressIn, isDisabled, onPressIn],
+    );
+
+    const handleInternalPressOut = useCallback(
+      (event: PressableEvent) => {
+        if (!isDisabled) {
+          handlePressOut();
+        }
+        onPressOut?.(event);
+      },
+      [handlePressOut, isDisabled, onPressOut],
+    );
+
     return (
       <AnimatedPressable
         ref={ref}
         className={clsx(classes.container, isDisabled && "opacity-60", className)}
-        style={[animatedStyle, style]}
+        style={pressableStyle}
         accessibilityRole="button"
         accessibilityState={{ disabled: isDisabled, busy: loading }}
-        onPressIn={(event) => {
-          if (!isDisabled) {
-            handlePressIn();
-          }
-          onPressIn?.(event);
-        }}
-        onPressOut={(event) => {
-          if (!isDisabled) {
-            handlePressOut();
-          }
-          onPressOut?.(event);
-        }}
+        onPressIn={handleInternalPressIn}
+        onPressOut={handleInternalPressOut}
         disabled={disabled}
         {...rest}
       >

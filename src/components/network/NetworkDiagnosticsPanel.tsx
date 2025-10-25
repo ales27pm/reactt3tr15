@@ -30,7 +30,7 @@ const formatVpnStatus = (status: VpnStatus | null): string => {
 };
 
 const renderWifiNetwork = (network: WifiNetwork) => (
-  <View key={`${network.ssid ?? "unknown"}-${network.frequency ?? "na"}`} style={styles.networkRow}>
+  <View key={`${network.ssid ?? "unknown"}-${network.frequencyMhz ?? "na"}`} style={styles.networkRow}>
     <Text style={styles.networkSsid}>{network.ssid ?? "Hidden network"}</Text>
     <Text style={styles.networkMeta}>{network.security ?? "Unknown security"}</Text>
   </View>

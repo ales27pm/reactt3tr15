@@ -23,7 +23,7 @@ async function fallbackCurrentNetwork(): Promise<CurrentNetworkInfo | null> {
     }
 
     return {
-      ssid: null,
+      ssid: "unknown",
       security: "unknown",
       interfaceName: state.type ?? undefined,
       ipAddress: ip,

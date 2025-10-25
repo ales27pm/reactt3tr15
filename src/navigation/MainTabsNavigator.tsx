@@ -27,17 +27,17 @@ export const MainTabsNavigator = () => (
     <Tab.Screen
       name="Play"
       component={TetrisScreen}
-      options={{ tabBarTestID: "tab-play", tabBarAccessibilityLabel: "Play tab" }}
+      options={{ tabBarButtonTestID: "tab-play", tabBarAccessibilityLabel: "Play tab" }}
     />
     <Tab.Screen
       name="Rewards"
       component={RewardsScreen}
-      options={{ tabBarTestID: "tab-rewards", tabBarAccessibilityLabel: "Rewards tab" }}
+      options={{ tabBarButtonTestID: "tab-rewards", tabBarAccessibilityLabel: "Rewards tab" }}
     />
     <Tab.Screen
       name="Settings"
       component={NotificationSettingsScreen}
-      options={{ tabBarTestID: "tab-settings", tabBarAccessibilityLabel: "Settings tab" }}
+      options={{ tabBarButtonTestID: "tab-settings", tabBarAccessibilityLabel: "Settings tab" }}
     />
   </Tab.Navigator>
 );

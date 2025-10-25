@@ -1,4 +1,5 @@
-import { detox } from "detox";
+import { afterAll, afterEach, beforeAll, beforeEach, jest } from "@jest/globals";
+import detox from "detox";
 import adapter from "detox/runners/jest/adapter";
 
 jest.setTimeout(120000);

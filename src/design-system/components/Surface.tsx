@@ -1,6 +1,5 @@
 import React, { forwardRef } from "react";
 import { View, ViewProps } from "react-native";
-import { styled } from "nativewind";
 import clsx from "clsx";
 
 type SurfaceVariant = "raised" | "sunken" | "translucent";
@@ -26,16 +25,14 @@ export interface SurfaceProps extends ViewProps {
   className?: string;
 }
 
-const StyledView = styled(View);
-
 export const resolveSurfaceClasses = (variant: SurfaceVariant, state: SurfaceState): string =>
   clsx("rounded-3xl p-6", variantClasses[variant], stateClasses[state]);
 
 export const Surface = forwardRef<View, SurfaceProps>(
   ({ variant = "raised", state = "default", className, children, ...props }, ref) => (
-    <StyledView ref={ref} className={clsx(resolveSurfaceClasses(variant, state), className)} {...props}>
+    <View ref={ref} className={clsx(resolveSurfaceClasses(variant, state), className)} {...props}>
       {children}
-    </StyledView>
+    </View>
   ),
 );
 
