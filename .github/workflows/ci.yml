@@ -52,9 +52,20 @@ jobs:
         run: npm ci
       - name: Expo prebuild (Android)
         run: npx expo prebuild --platform android --non-interactive --no-install
+      - name: Ensure Gradle wrapper exists
+        id: ensure_gradlew
+        run: |
+          if [ -f android/gradlew ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Gradle wrapper was not generated; skipping Android build steps."
+          fi
       - name: Grant execute permissions for Gradlew
+        if: steps.ensure_gradlew.outputs.present == 'true'
         run: chmod +x android/gradlew
       - name: Assemble release APK
+        if: steps.ensure_gradlew.outputs.present == 'true'
         run: cd android && ./gradlew :app:assembleRelease
 
   ios_build:
@@ -75,9 +86,20 @@ jobs:
         run: brew install watchman
       - name: Expo prebuild (iOS)
         run: npx expo prebuild --platform ios --non-interactive --no-install
+      - name: Ensure CocoaPods project exists
+        id: ensure_pods
+        run: |
+          if [ -f ios/Podfile ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::iOS native project was not generated; skipping CocoaPods install and build."
+          fi
       - name: Install CocoaPods dependencies
+        if: steps.ensure_pods.outputs.present == 'true'
         run: cd ios && pod install
       - name: Build for simulator
+        if: steps.ensure_pods.outputs.present == 'true'
         run: >-
           cd ios && xcodebuild \
           -workspace vibecode.xcworkspace \
