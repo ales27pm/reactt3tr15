@@ -66,7 +66,7 @@ This guide explains how to enable the TurboModule-based network diagnostics brid
      ```bash
      sudo rvictl -x <DEVICE-UDID>
      ```
-   - The React Native app should call `startPacketCapture` only after a tethered session is established. If the API rejects, fall back to the manual rvictl steps above.
+   - The React Native app should call `startPacketCapture` only after a tethered session is established. If the API call is rejected, fall back to the manual rvictl steps above.
 
 ## Android Configuration
 

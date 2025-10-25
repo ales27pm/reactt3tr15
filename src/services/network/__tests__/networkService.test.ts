@@ -33,6 +33,9 @@ describe("Network service fallbacks", () => {
 
   it("returns empty wifi list without native module", async () => {
     await expect(scanWifiNetworks()).resolves.toEqual([]);
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining("[NetworkService] scanWifiNetworks is unavailable"),
+    );
   });
 
   it("falls back to expo-network for current network", async () => {
@@ -43,11 +46,49 @@ describe("Network service fallbacks", () => {
     getIpAddressMock.mockResolvedValue("192.168.1.24");
 
     await expect(getCurrentNetwork()).resolves.toEqual({
-      ssid: "wifi",
+      ssid: null,
       security: "unknown",
       interfaceName: "wifi",
       ipAddress: "192.168.1.24",
     });
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining("[NetworkService] getCurrentNetwork is unavailable"),
+    );
+  });
+
+  it("returns null when expo-network reports disconnected state", async () => {
+    getNetworkStateMock.mockResolvedValue({
+      type: "wifi",
+      isConnected: false,
+    });
+
+    await expect(getCurrentNetwork()).resolves.toBeNull();
+  });
+
+  it("returns null when expo-network throws", async () => {
+    const error = new Error("network state failed");
+    getNetworkStateMock.mockRejectedValue(error);
+
+    await expect(getCurrentNetwork()).resolves.toBeNull();
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining("[NetworkService] Failed to resolve fallback current network"),
+      error,
+    );
+  });
+
+  it("returns null when expo-network IP lookup throws", async () => {
+    getNetworkStateMock.mockResolvedValue({
+      type: "wifi",
+      isConnected: true,
+    });
+    const error = new Error("ip failure");
+    getIpAddressMock.mockRejectedValue(error);
+
+    await expect(getCurrentNetwork()).resolves.toBeNull();
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining("[NetworkService] Failed to resolve fallback current network"),
+      error,
+    );
   });
 
   it("falls back to expo-network for VPN status", async () => {
@@ -108,5 +149,64 @@ describe("Network service native path", () => {
       expect.objectContaining({ interfaceName: "wlan0" }),
     );
     await expect(stopPacketCapture("capture-1")).resolves.toBeUndefined();
+  });
+
+  describe("Native module error handling", () => {
+    it("propagates errors from scanWifiNetworks and logs them", async () => {
+      const error = new Error("Native scanWifiNetworks failed");
+      nativeInstance.scanWifiNetworks.mockRejectedValueOnce(error);
+
+      await expect(scanWifiNetworks()).rejects.toThrow("Native scanWifiNetworks failed");
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining("[NetworkService] Native scan failed"),
+        error,
+      );
+    });
+
+    it("propagates errors from getCurrentNetwork and logs them", async () => {
+      const error = new Error("Native getCurrentNetwork failed");
+      nativeInstance.getCurrentNetwork.mockRejectedValueOnce(error);
+
+      await expect(getCurrentNetwork()).resolves.toBeNull();
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining("[NetworkService] Native current network lookup failed"),
+        error,
+      );
+    });
+
+    it("propagates errors from getVpnStatus and logs them", async () => {
+      const error = new Error("Native getVpnStatus failed");
+      nativeInstance.getVpnStatus.mockRejectedValueOnce(error);
+
+      await expect(getVpnStatus()).resolves.toEqual({ active: false });
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining("[NetworkService] Native VPN status lookup failed"),
+        error,
+      );
+    });
+
+    it("propagates errors from startPacketCapture and logs them", async () => {
+      const error = new Error("Native startPacketCapture failed");
+      nativeInstance.startPacketCapture.mockRejectedValueOnce(error);
+
+      await expect(startPacketCapture({ interfaceName: "wlan0" })).rejects.toThrow(
+        "Native startPacketCapture failed",
+      );
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining("[NetworkService] Failed to start packet capture"),
+        error,
+      );
+    });
+
+    it("propagates errors from stopPacketCapture and logs them", async () => {
+      const error = new Error("Native stopPacketCapture failed");
+      nativeInstance.stopPacketCapture.mockRejectedValueOnce(error);
+
+      await expect(stopPacketCapture("capture-1")).rejects.toThrow("Native stopPacketCapture failed");
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining("[NetworkService] Failed to stop packet capture"),
+        error,
+      );
+    });
   });
 });

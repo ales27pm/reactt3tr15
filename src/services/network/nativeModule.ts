@@ -18,29 +18,22 @@ const MODULE_NAME = "NetworkDiagnostics";
 let cachedModule: NetworkDiagnosticsTurboModule | null | undefined;
 
 export function getNativeNetworkModule(): NetworkDiagnosticsTurboModule | null {
-  if (cachedModule !== undefined) {
-    return cachedModule;
+  if (Platform.OS !== "ios" && Platform.OS !== "android") {
+    return null;
   }
 
-  try {
-    const module = TurboModuleRegistry.get<NetworkDiagnosticsTurboModule>(MODULE_NAME);
-    if (!module) {
+  if (cachedModule === undefined) {
+    try {
+      cachedModule =
+        TurboModuleRegistry.get<NetworkDiagnosticsTurboModule>(MODULE_NAME) ?? null;
+    } catch (error) {
+      if (__DEV__) {
+        logWarn(`[NetworkService] Failed to load native module: ${(error as Error).message}`, {
+          context: "network-service",
+        });
+      }
       cachedModule = null;
-      return cachedModule;
     }
-
-    if (Platform.OS === "ios" || Platform.OS === "android") {
-      cachedModule = module;
-    } else {
-      cachedModule = null;
-    }
-  } catch (error) {
-    if (__DEV__) {
-      logWarn(`[NetworkService] Failed to load native module: ${(error as Error).message}`, {
-        context: "network-service",
-      });
-    }
-    cachedModule = null;
   }
 
   return cachedModule;

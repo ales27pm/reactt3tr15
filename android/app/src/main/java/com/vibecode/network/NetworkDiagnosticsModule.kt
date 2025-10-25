@@ -70,13 +70,18 @@ class NetworkDiagnosticsModule(
 
       val frequency = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) info.frequency else -1
       val map = Arguments.createMap().apply {
-        putString("ssid", info.ssid?.trim('"'))
+        putString("ssid", formatSsid(info.ssid))
         putString("bssid", info.bssid)
         putDouble("signalLevel", info.rssi.toDouble())
         if (frequency > 0) {
           putDouble("frequencyMhz", frequency.toDouble())
         }
-        putInt("channel", frequencyToChannel(frequency))
+        val channel = frequencyToChannel(frequency)
+        if (channel != -1) {
+          putInt("channel", channel)
+        } else {
+          putNull("channel")
+        }
         putString("security", "unknown")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
           putString("interfaceName", info.networkSpecifier)
@@ -129,26 +134,57 @@ class NetworkDiagnosticsModule(
   }
 
   private fun ScanResult.toWritableMap() = Arguments.createMap().apply {
-    putString("ssid", SSID ?: "")
+    putString("ssid", formatSsid(SSID))
     putString("bssid", BSSID ?: "")
     putDouble("signalLevel", level.toDouble())
     putDouble("frequencyMhz", frequency.toDouble())
-    putInt("channel", frequencyToChannel(frequency))
+    val channel = frequencyToChannel(frequency)
+    if (channel != -1) {
+      putInt("channel", channel)
+    } else {
+      putNull("channel")
+    }
     putString("security", parseSecurity(capabilities))
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
       putDouble("lastSeen", timestamp.toDouble())
     }
   }
 
+  /**
+   * Parses the Wi-Fi security capabilities string and returns a normalized security type.
+   * Handles common combinations like WPA2-Enterprise, WPA3-Enterprise, and EAP.
+   * Limitations: May not detect all proprietary or future security types.
+   */
   private fun parseSecurity(capabilities: String?): String {
     val caps = capabilities ?: return "unknown"
+    val capsLower = caps.lowercase()
+
     return when {
-      caps.contains("WEP", true) -> "wep"
-      caps.contains("WPA3", true) -> "wpa3"
-      caps.contains("WPA2", true) -> "wpa2"
-      caps.contains("WPA", true) -> "wpa"
-      caps.contains("EAP", true) -> "enterprise"
+      capsLower.contains("wep") -> "wep"
+      // WPA3-Enterprise or WPA3-EAP
+      capsLower.contains("wpa3") &&
+        (capsLower.contains("eap") || capsLower.contains("enterprise")) -> "wpa3-enterprise"
+      capsLower.contains("wpa3") -> "wpa3"
+      // WPA2-Enterprise or WPA2-EAP
+      capsLower.contains("wpa2") &&
+        (capsLower.contains("eap") || capsLower.contains("enterprise")) -> "wpa2-enterprise"
+      capsLower.contains("wpa2") -> "wpa2"
+      // WPA-Enterprise or WPA-EAP
+      capsLower.contains("wpa") &&
+        (capsLower.contains("eap") || capsLower.contains("enterprise")) -> "wpa-enterprise"
+      capsLower.contains("wpa") -> "wpa"
+      // EAP or Enterprise without WPA/WPA2/WPA3
+      capsLower.contains("eap") || capsLower.contains("enterprise") -> "enterprise"
       else -> "open"
+    }
+  }
+
+  private fun formatSsid(ssid: String?): String? {
+    if (ssid == null || ssid == WifiManager.UNKNOWN_SSID) return null
+    return if (ssid.startsWith("\"") && ssid.endsWith("\"") && ssid.length > 1) {
+      ssid.substring(1, ssid.length - 1)
+    } else {
+      ssid
     }
   }
 
