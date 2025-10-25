@@ -103,7 +103,7 @@ export const Button = forwardRef<PressableComponentRef, ButtonProps>(
         accessibilityState={{ disabled: isDisabled, busy: loading }}
         onPressIn={handleInternalPressIn}
         onPressOut={handleInternalPressOut}
-        disabled={disabled}
+        disabled={isDisabled}
         {...rest}
       >
         <View className="flex-row items-center justify-center gap-2">
