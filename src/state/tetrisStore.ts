@@ -33,7 +33,7 @@ const ensureQueue = (queue: PieceType[], minLen: number = 7): PieceType[] => {
   return q;
 };
 
-interface TetrisState {
+interface _TetrisState {
   grid: (string | null)[][];
   currentPiece: CurrentPiece | null;
   nextQueue: PieceType[]; // head is next piece
@@ -196,7 +196,8 @@ export const useTetrisStore = create<any>()(
         const { currentPiece, holdPiece, canHold, grid } = get();
         if (!currentPiece || !canHold) return;
         let incoming: PieceType | null = null;
-        if (holdPiece) incoming = holdPiece; else {
+        if (holdPiece) incoming = holdPiece;
+        else {
           const q = ensureQueue(get().nextQueue, 7);
           const head = q.shift()!;
           set({ nextQueue: q });
@@ -211,11 +212,11 @@ export const useTetrisStore = create<any>()(
         set({ currentPiece: newCurrent, holdPiece: newHold, canHold: false, lockExpireAt: null });
       },
 
-       pauseGame: () => set((s: any) => ({ paused: !s.paused })),
+      pauseGame: () => set((s: any) => ({ paused: !s.paused })),
 
       resetGame: () => get().initializeGame(),
 
-       toggleAsciiMode: () => set((s: any) => ({ asciiMode: !s.asciiMode })),
+      toggleAsciiMode: () => set((s: any) => ({ asciiMode: !s.asciiMode })),
 
       // settings
       toggleGridLines: () => set((s: any) => ({ showGridLines: !s.showGridLines })),
@@ -246,8 +247,8 @@ export const useTetrisStore = create<any>()(
         dasMs: state.dasMs,
         arrMs: state.arrMs,
       }),
-    }
-  )
+    },
+  ),
 );
 
 // Internal helper that reads/writes store state directly
@@ -264,7 +265,12 @@ function lockAndSpawn() {
   if (linesCleared > 0) {
     combo = combo + 1;
     if (combo > 1) add += (combo - 1) * 50;
-    if (linesCleared === 4) { if (b2b) add += Math.floor(add * 0.5); b2b = true; } else { b2b = false; }
+    if (linesCleared === 4) {
+      if (b2b) add += Math.floor(add * 0.5);
+      b2b = true;
+    } else {
+      b2b = false;
+    }
   } else {
     combo = 0;
   }
