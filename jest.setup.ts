@@ -26,6 +26,11 @@ type CapturedMessage = {
   context?: { level?: string; extras?: Record<string, unknown> };
 };
 
+type Scope = {
+  setTag: jest.Mock<void, [key: string, value: string]>;
+  setExtra: jest.Mock<void, [key: string, value: unknown]>;
+};
+
 const createScopeSnapshot = (): ScopeSnapshot => ({ tags: {}, extras: {} });
 
 const assignScopeValue = <T extends keyof ScopeSnapshot>(
@@ -58,12 +63,12 @@ jest.mock(
       assignScopeValue(scopeSnapshot, "extras", key, value);
     });
 
-    const scope = {
+    const scope: Scope = {
       setTag: recordScopeTag,
       setExtra: recordScopeExtra,
     };
 
-    const configureScope = jest.fn((callback: (scope: typeof scope) => void) => {
+    const configureScope = jest.fn((callback: (scope: Scope) => void) => {
       callback(scope);
     });
 
