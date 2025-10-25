@@ -96,7 +96,7 @@ This guide explains how to enable the TurboModule-based network diagnostics brid
    - In `MainApplication.kt` (or `MainApplication.java`), add:
 
      ```kotlin
-     import com.vibecode.network.NetworkDiagnosticsPackage
+     import com.netsight.network.NetworkDiagnosticsPackage
 
      override fun getPackages(): List<ReactPackage> =
        super.getPackages() + listOf(NetworkDiagnosticsPackage())

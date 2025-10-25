@@ -1,4 +1,4 @@
-package com.vibecode.network
+package com.netsight.network
 
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext

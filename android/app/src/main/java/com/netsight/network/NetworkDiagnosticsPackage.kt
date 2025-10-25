@@ -1,4 +1,4 @@
-package com.vibecode.network
+package com.netsight.network
 
 import com.facebook.react.TurboReactPackage
 import com.facebook.react.bridge.NativeModule
@@ -20,7 +20,7 @@ class NetworkDiagnosticsPackage : TurboReactPackage() {
     val moduleInfos = mapOf(
       "NetworkDiagnostics" to ReactModuleInfo(
         "NetworkDiagnostics",
-        "com.vibecode.network.NetworkDiagnosticsModule",
+        "com.netsight.network.NetworkDiagnosticsModule",
         false,
         false,
         false,

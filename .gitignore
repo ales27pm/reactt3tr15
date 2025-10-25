@@ -34,24 +34,23 @@ yarn-error.*
 *.tsbuildinfo
 
 # iOS & Android
-ios/*
-!ios/NetworkDiagnostics/
-!ios/NetworkDiagnostics/**
-android/*
-!android/app/
-android/app/*
-!android/app/src/
-android/app/src/*
-!android/app/src/main/
-android/app/src/main/*
-!android/app/src/main/java/
-android/app/src/main/java/*
-!android/app/src/main/java/com/
-android/app/src/main/java/com/*
-!android/app/src/main/java/com/vibecode/
-android/app/src/main/java/com/vibecode/*
-!android/app/src/main/java/com/vibecode/network/
-!android/app/src/main/java/com/vibecode/network/**
+ios/Pods/
+ios/build/
+ios/*.xcworkspace
+ios/*.xcuserstate
+ios/*/*.xcworkspace
+ios/*/*.xcuserstate
+ios/.xcode.env.local
+ios/.xcode.env.updates
+# Ignore generated app icon bitmaps so the repo remains binary-free
+ios/*/Images.xcassets/AppIcon.appiconset/*.png
+android/.gradle/
+android/.idea/
+android/local.properties
+android/app/build/
+android/build/
+android/app/debug.keystore
+android/gradle/wrapper/gradle-wrapper.jar
 
 # Local secrets for GitHub pushes only
 .specialenv/

@@ -20,7 +20,7 @@ RCT_EXPORT_MODULE(NetworkDiagnostics);
 
 - (instancetype)init {
   if (self = [super init]) {
-    _logger = os_log_create("com.vibecode.diagnostics", "NetworkDiagnostics");
+    _logger = os_log_create("com.anonymous.netsight", "NetworkDiagnostics");
   }
   return self;
 }
@@ -65,12 +65,12 @@ RCT_EXPORT_MODULE(NetworkDiagnostics);
   NSNumber *signal = @(network.signalStrength);
   NSNumber *channel = @(network.channelNumber);
 
-  return @{ 
-    @"ssid" : network.SSID ?: @"", 
-    @"bssid" : network.BSSID ?: @"", 
-    @"signalLevel" : signal, 
-    @"channel" : channel, 
-    @"security" : security, 
+  return @{
+    @"ssid" : network.SSID ?: @"",
+    @"bssid" : network.BSSID ?: @"",
+    @"signalLevel" : signal,
+    @"channel" : channel,
+    @"security" : security,
   };
 }
 

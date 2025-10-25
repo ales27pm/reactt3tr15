@@ -12,9 +12,9 @@ module.exports = {
   apps: {
     "ios.sim.release": {
       type: "ios.app",
-      binaryPath: "ios/build/Build/Products/Release-iphonesimulator/vibecode.app",
+      binaryPath: "ios/build/Build/Products/Release-iphonesimulator/Netsight.app",
       build:
-        "EXPO_NO_TELEMETRY=1 npx expo prebuild --platform ios --non-interactive --no-install && cd ios && xcodebuild -workspace vibecode.xcworkspace -scheme vibecode -configuration Release -sdk iphonesimulator -derivedDataPath build",
+        "EXPO_NO_TELEMETRY=1 npx expo prebuild --platform ios --non-interactive --no-install && cd ios && xcodebuild -workspace Netsight.xcworkspace -scheme Netsight -configuration Release -sdk iphonesimulator -derivedDataPath build",
     },
     "android.emu.release": {
       type: "android.apk",
