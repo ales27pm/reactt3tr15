@@ -1,9 +1,6 @@
 module.exports = {
   preset: "jest-expo",
-  testMatch: [
-    "<rootDir>/src/design-system/__tests__/**/*.test.ts",
-    "<rootDir>/src/services/network/__tests__/**/*.test.ts",
-  ],
+  testMatch: ["<rootDir>/**/__tests__/**/*.(test|spec).{ts,tsx,js,jsx}"],
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json"],
   setupFilesAfterEnv: ["@testing-library/jest-native/extend-expect"],
   testPathIgnorePatterns: ["/node_modules/", "<rootDir>/.expo"],

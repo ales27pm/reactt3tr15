@@ -10,6 +10,7 @@ import android.util.Log
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
+import java.util.Locale
 
 private const val TAG = "NetworkDiagnosticsModule"
 
@@ -84,7 +85,9 @@ class NetworkDiagnosticsModule(
         }
         putString("security", "unknown")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-          putString("interfaceName", info.networkSpecifier)
+          val activeNetwork = connectivityManager?.activeNetwork
+          val linkProperties = connectivityManager?.getLinkProperties(activeNetwork)
+          putString("interfaceName", linkProperties?.interfaceName)
         }
         putString("ipAddress", formatIp(info.ipAddress))
       }
@@ -200,6 +203,7 @@ class NetworkDiagnosticsModule(
 
   private fun formatIp(ip: Int): String {
     return String.format(
+      Locale.US,
       "%d.%d.%d.%d",
       ip and 0xff,
       ip shr 8 and 0xff,
