@@ -8,6 +8,9 @@ const DEFAULT_SAMPLE_RATE = Number.parseFloat(process.env.EXPO_PUBLIC_SENTRY_TRA
 
 let initialized = false;
 let crashReportingEnabled = false;
+let initializationAttempted = false;
+let currentSampleRate = DEFAULT_SAMPLE_RATE;
+let lastInitOptions: CrashReporterOptions = {};
 
 export type CrashReporterOptions = {
   dsn?: string;
@@ -21,6 +24,10 @@ export type CrashReporterFeatureConfig = {
 };
 
 const applyScopeMetadata = (config: CrashReporterFeatureConfig) => {
+  if (!initialized) {
+    return;
+  }
+
   Sentry.Native.configureScope((scope) => {
     scope.setTag("crash_reporting_enabled", String(config.enabled));
     if (config.sampleRate != null) {
@@ -31,22 +38,49 @@ const applyScopeMetadata = (config: CrashReporterFeatureConfig) => {
   });
 };
 
-export const initCrashReporting = (options: CrashReporterOptions = {}): void => {
+const closeCrashReporting = () => {
+  if (!initialized) {
+    return;
+  }
+
+  void Sentry.Native.close().catch((error: unknown) => {
+    logError("Failed to shut down Sentry", { context: "crash-reporter" }, error);
+  });
+
+  initialized = false;
+};
+
+const ensureInitialized = () => {
+  if (initialized || !crashReportingEnabled) {
+    return;
+  }
+
+  const initSucceeded = initCrashReporting({ ...lastInitOptions, tracesSampleRate: currentSampleRate });
+
+  if (!initSucceeded) {
+    crashReportingEnabled = false;
+  }
+};
+
+export const initCrashReporting = (options: CrashReporterOptions = {}): boolean => {
+  initializationAttempted = true;
+  lastInitOptions = { ...options };
+
   if (initialized) {
     logDebug("Crash reporter already initialised", { context: "crash-reporter" });
-    return;
+    return true;
   }
 
   const dsn = options.dsn ?? SENTRY_DSN;
 
   if (!dsn) {
     logWarn("Sentry DSN not provided. Crash reporting is disabled.", { context: "crash-reporter" });
-    initialized = true;
     crashReportingEnabled = false;
-    return;
+    return false;
   }
 
   const tracesSampleRate = options.tracesSampleRate ?? DEFAULT_SAMPLE_RATE;
+  currentSampleRate = tracesSampleRate;
 
   Sentry.init({
     dsn,
@@ -60,18 +94,42 @@ export const initCrashReporting = (options: CrashReporterOptions = {}): void => 
   Sentry.Native.setTag("platform", Platform.OS);
   applyScopeMetadata({ enabled: true, sampleRate: tracesSampleRate });
   logInfo("Crash reporter initialised", { context: "crash-reporter" });
+  return true;
 };
 
 export const updateCrashReporting = (config: CrashReporterFeatureConfig): void => {
-  if (!initialized) {
-    initCrashReporting();
+  if (config.enabled) {
+    crashReportingEnabled = true;
+    if (config.sampleRate != null) {
+      currentSampleRate = config.sampleRate;
+    }
+
+    if (!initialized) {
+      const initSucceeded = initCrashReporting({
+        ...lastInitOptions,
+        tracesSampleRate: currentSampleRate,
+      });
+
+      if (!initSucceeded) {
+        crashReportingEnabled = false;
+        logWarn("Crash reporting could not be initialised; leaving disabled", { context: "crash-reporter" });
+        return;
+      }
+    }
+
+    applyScopeMetadata({ enabled: true, sampleRate: currentSampleRate });
+    logInfo("Crash reporting enabled via remote config", { context: "crash-reporter" });
+    return;
   }
 
-  crashReportingEnabled = config.enabled;
-  applyScopeMetadata(config);
-  logInfo(`Crash reporting ${config.enabled ? "enabled" : "disabled"} via remote config`, {
-    context: "crash-reporter",
-  });
+  crashReportingEnabled = false;
+
+  if (initialized) {
+    applyScopeMetadata({ enabled: false, sampleRate: currentSampleRate });
+  }
+
+  closeCrashReporting();
+  logInfo("Crash reporting disabled via remote config", { context: "crash-reporter" });
 };
 
 export const captureError = (
@@ -79,7 +137,18 @@ export const captureError = (
   context?: { tags?: Record<string, string>; extra?: Record<string, unknown> },
 ): void => {
   if (!initialized) {
-    initCrashReporting();
+    let initSucceeded: boolean;
+
+    if (!initializationAttempted) {
+      initSucceeded = initCrashReporting();
+    } else {
+      ensureInitialized();
+      initSucceeded = initialized;
+    }
+
+    if (!initSucceeded || !initialized) {
+      crashReportingEnabled = false;
+    }
   }
 
   if (!crashReportingEnabled) {
@@ -99,7 +168,18 @@ export const captureError = (
 
 export const captureBreadcrumb = (message: string, data?: Record<string, unknown>): void => {
   if (!initialized) {
-    initCrashReporting();
+    let initSucceeded: boolean;
+
+    if (!initializationAttempted) {
+      initSucceeded = initCrashReporting();
+    } else {
+      ensureInitialized();
+      initSucceeded = initialized;
+    }
+
+    if (!initSucceeded || !initialized) {
+      crashReportingEnabled = false;
+    }
   }
 
   if (!crashReportingEnabled) {

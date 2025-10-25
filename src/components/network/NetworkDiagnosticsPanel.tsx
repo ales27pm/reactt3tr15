@@ -29,8 +29,8 @@ const formatVpnStatus = (status: VpnStatus | null): string => {
   return `Active${typeLabel}${routeLabel}`;
 };
 
-const renderWifiNetwork = (network: WifiNetwork) => (
-  <View key={`${network.ssid ?? "unknown"}-${network.frequencyMhz ?? "na"}`} style={styles.networkRow}>
+const renderWifiNetwork = (network: WifiNetwork, index: number) => (
+  <View key={network.bssid ?? `${network.ssid ?? "unknown"}-${index}`} style={styles.networkRow}>
     <Text style={styles.networkSsid}>{network.ssid ?? "Hidden network"}</Text>
     <Text style={styles.networkMeta}>{network.security ?? "Unknown security"}</Text>
   </View>
@@ -110,7 +110,7 @@ export const NetworkDiagnosticsPanel = () => {
         </Text>
       );
     }
-    return wifiNetworks.map(renderWifiNetwork);
+    return wifiNetworks.map((network, index) => renderWifiNetwork(network, index));
   }, [featureSettings.allowWifiScan, wifiNetworks]);
 
   return (
