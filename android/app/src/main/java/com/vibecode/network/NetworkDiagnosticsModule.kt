@@ -83,6 +83,9 @@ class NetworkDiagnosticsModule(
         } else {
           putNull("channel")
         }
+        // WifiInfo does not expose security/capabilities for the current connection (unlike
+        // ScanResult), so we cannot determine SSID security here and return "unknown"; consumers
+        // should rely on scan results for security details or handle "unknown" accordingly.
         putString("security", "unknown")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
           val activeNetwork = connectivityManager?.activeNetwork
