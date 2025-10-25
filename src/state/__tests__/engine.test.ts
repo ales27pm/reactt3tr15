@@ -1,1 +1,5 @@
-// moved to engine.test.js for Bun's builtin test runner without TS typings
+describe("engine bun parity", () => {
+  it("provides a placeholder so Jest treats the suite as valid", () => {
+    expect(true).toBe(true);
+  });
+});

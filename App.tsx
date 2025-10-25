@@ -1,8 +1,12 @@
+import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import AppNavigator from "./src/navigation/AppNavigator";
+import { useFeatureFlagStore } from "./src/state/featureFlagsStore";
+import { logError, logInfo } from "./src/utils/logger";
+import { captureBreadcrumb } from "./src/monitoring/crashReporter";
 
 /*
 IMPORTANT NOTICE: DO NOT REMOVE
@@ -26,6 +30,24 @@ const openai_api_key = Constants.expoConfig.extra.apikey;
 */
 
 export default function App() {
+  const refreshRemoteConfig = useFeatureFlagStore((state) => state.refresh);
+  const remoteStatus = useFeatureFlagStore((state) => state.status);
+
+  useEffect(() => {
+    if (remoteStatus !== "idle") {
+      return;
+    }
+
+    captureBreadcrumb("Bootstrapping remote config");
+    void refreshRemoteConfig()
+      .then(() => {
+        logInfo("Remote config synchronised on app start", { context: "app" });
+      })
+      .catch((error) => {
+        logError("Failed to synchronise remote config on launch", { context: "app" }, error);
+      });
+  }, [refreshRemoteConfig, remoteStatus]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

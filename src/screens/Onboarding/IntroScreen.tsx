@@ -34,6 +34,7 @@ const OnboardingIntroScreen = ({ navigation }: OnboardingIntroScreenProps) => {
           navigation.replace("OnboardingPermissions");
         }}
         accessibilityRole="button"
+        testID="onboarding-intro-get-started"
       >
         <Text style={styles.primaryButtonLabel}>Get Started</Text>
       </Pressable>
