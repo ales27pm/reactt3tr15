@@ -102,11 +102,13 @@ jobs:
         run: cd ios && pod install
       - name: Build for simulator
         if: steps.ensure_pods.outputs.present == 'true'
-        run: >-
-          cd ios && xcodebuild \
-          -workspace Netsight.xcworkspace \
-          -scheme Netsight \
-          -configuration Release \
-          -sdk iphonesimulator \
-          -destination 'platform=iOS Simulator,name=iPhone 15' \
-          build
+        run: |
+          set -euo pipefail
+          cd ios
+          xcodebuild \
+            -workspace Netsight.xcworkspace \
+            -scheme Netsight \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            build
