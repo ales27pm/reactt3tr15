@@ -115,41 +115,6 @@ case "$( uname )" in                #(
 esac
 
 WRAPPER_JAR=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
-if [ ! -f "$WRAPPER_JAR" ]; then
-    PROPERTIES_FILE=$APP_HOME/gradle/wrapper/gradle-wrapper.properties
-    if [ ! -f "$PROPERTIES_FILE" ]; then
-        die "ERROR: Gradle wrapper properties missing at $PROPERTIES_FILE"
-    fi
-    distributionUrl=$(grep -E '^distributionUrl=' "$PROPERTIES_FILE" | tail -n 1 | cut -d'=' -f2-)
-    if [ -z "$distributionUrl" ]; then
-        die "ERROR: distributionUrl was not found in $PROPERTIES_FILE"
-    fi
-    distributionUrl=${distributionUrl//\\:/://}
-    distributionFile=${distributionUrl##*/}
-    baseName=${distributionFile%-bin.zip}
-    baseName=${baseName%-all.zip}
-    baseName=${baseName%.zip}
-    version=${baseName#gradle-}
-    if [ -z "$version" ] || [ "$version" = "$baseName" ]; then
-        die "ERROR: Unable to parse Gradle version from $distributionUrl"
-    fi
-    wrapperUrl="https://services.gradle.org/distributions/gradle-$version-wrapper.jar"
-    tmpJar="$WRAPPER_JAR.download"
-    mkdir -p "$(dirname "$WRAPPER_JAR")"
-    echo "Downloading Gradle wrapper from $wrapperUrl" >&2
-    if command -v curl >/dev/null 2>&1; then
-        if ! curl -fsSL "$wrapperUrl" -o "$tmpJar"; then
-            die "ERROR: curl failed to download $wrapperUrl"
-        fi
-    elif command -v wget >/dev/null 2>&1; then
-        if ! wget -q "$wrapperUrl" -O "$tmpJar"; then
-            die "ERROR: wget failed to download $wrapperUrl"
-        fi
-    else
-        die "ERROR: Neither curl nor wget is available to download $wrapperUrl"
-    fi
-    mv "$tmpJar" "$WRAPPER_JAR"
-fi
 
 CLASSPATH=$WRAPPER_JAR
 
