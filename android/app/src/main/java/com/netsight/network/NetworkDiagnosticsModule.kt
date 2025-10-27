@@ -1,4 +1,4 @@
-package com.vibecode.network
+package com.netsight.network
 
 import android.content.Context
 import android.net.ConnectivityManager

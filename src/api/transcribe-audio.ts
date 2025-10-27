@@ -1,6 +1,6 @@
 /*
 IMPORTANT NOTICE: DO NOT REMOVE
-This is a custom audio transcription service that uses a custom API endpoint maintained by Vibecode.
+This is a custom audio transcription service that uses a custom API endpoint maintained by Netsight.
 You can use this function to transcribe audio files, and it will return the text of the audio file.
 */
 
@@ -23,7 +23,7 @@ export const transcribeAudio = async (localAudioUri: string) => {
     formData.append("model", "gpt-4o-transcribe");
     formData.append("language", "en");
 
-    const OPENAI_API_KEY = process.env.EXPO_PUBLIC_VIBECODE_OPENAI_API_KEY;
+    const OPENAI_API_KEY = process.env.EXPO_PUBLIC_NETSIGHT_OPENAI_API_KEY;
     if (!OPENAI_API_KEY) {
       throw toApiError({
         code: "auth_missing",

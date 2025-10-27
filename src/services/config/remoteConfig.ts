@@ -28,7 +28,7 @@ export type RemoteConfig = {
 
 export type RemoteConfigOverrides = Partial<RemoteConfig>;
 
-const STORAGE_KEY = "@vibecode/remote-config";
+const STORAGE_KEY = "@netsight/remote-config";
 const LOG_TAG = "[RemoteConfig]";
 
 const parseEnvBoolean = (value: string | undefined, fallback: boolean): boolean => {

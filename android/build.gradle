@@ -1,0 +1,49 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+  repositories {
+    google()
+    mavenCentral()
+  }
+  dependencies {
+    def agpVersion = findProperty("android.agpVersion")?.toString() ?: "8.5.2"
+    def kotlinVersion = findProperty("android.kotlinVersion")?.toString() ?: "2.0.21"
+
+    classpath("com.android.tools.build:gradle:${agpVersion}")
+    classpath('com.facebook.react:react-native-gradle-plugin')
+    classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}")
+  }
+}
+
+ext {
+  compileSdkVersion = Integer.parseInt(findProperty("android.compileSdkVersion")?.toString() ?: "35")
+  targetSdkVersion = Integer.parseInt(findProperty("android.targetSdkVersion")?.toString() ?: "35")
+  minSdkVersion = Integer.parseInt(findProperty("android.minSdkVersion")?.toString() ?: "24")
+  buildToolsVersion = findProperty("android.buildToolsVersion")?.toString() ?: "35.0.0"
+  ndkVersion = findProperty("android.ndkVersion")?.toString() ?: "26.1.10909125"
+  kotlinVersion = findProperty("android.kotlinVersion")?.toString() ?: "2.0.21"
+  kspVersion = findProperty("android.kspVersion")?.toString() ?: "2.0.21-1.0.28"
+}
+
+def reactNativePackageJson = providers.exec {
+  workingDir(rootDir)
+  commandLine("node", "--print", "require.resolve('react-native/package.json')")
+}.standardOutput.asText.get().trim()
+
+def reactNativeAndroidDir = new File(new File(reactNativePackageJson).parentFile, "android").absoluteFile
+
+allprojects {
+  repositories {
+    maven {
+      // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+      url(reactNativeAndroidDir)
+    }
+
+    google()
+    mavenCentral()
+    maven { url 'https://www.jitpack.io' }
+  }
+}
+
+apply plugin: "expo-root-project"
+apply plugin: "com.facebook.react.rootproject"

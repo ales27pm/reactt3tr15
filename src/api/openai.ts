@@ -11,7 +11,7 @@ import OpenAI from "openai";
 import { logWarn } from "../utils/logger";
 
 export const getOpenAIClient = () => {
-  const apiKey = process.env.EXPO_PUBLIC_VIBECODE_OPENAI_API_KEY;
+  const apiKey = process.env.EXPO_PUBLIC_NETSIGHT_OPENAI_API_KEY;
   if (!apiKey) {
     logWarn("OpenAI API key not found in environment variables", { context: "openai" });
   }

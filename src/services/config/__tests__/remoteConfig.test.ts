@@ -42,7 +42,7 @@ describe("remoteConfig", () => {
   });
 
   it("merges overrides from remote payload", async () => {
-    process.env.EXPO_PUBLIC_REMOTE_CONFIG_URL = "https://config.vibecode.app/app.json";
+    process.env.EXPO_PUBLIC_REMOTE_CONFIG_URL = "https://config.netsight.app/app.json";
     const overrides: Partial<RemoteConfig> = {
       version: 2,
       featureFlags: {
@@ -76,7 +76,7 @@ describe("remoteConfig", () => {
     expect(config.network.diagnosticsPollingIntervalSeconds).toBe(180);
     expect(updateCrashReportingMock).toHaveBeenCalledWith({ enabled: false, sampleRate: 0.25 });
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://config.vibecode.app/app.json",
+      "https://config.netsight.app/app.json",
       expect.objectContaining({ method: "GET" }),
     );
   });

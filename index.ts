@@ -2,7 +2,7 @@
 import { logInfo } from "./src/utils/logger";
 import { initCrashReporting } from "./src/monitoring/crashReporter";
 
-logInfo("Project ID is", { context: "index" }, process.env.EXPO_PUBLIC_VIBECODE_PROJECT_ID);
+logInfo("Project ID is", { context: "index" }, process.env.EXPO_PUBLIC_NETSIGHT_PROJECT_ID);
 
 import "./global.css";
 import "react-native-get-random-values";

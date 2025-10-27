@@ -95,7 +95,7 @@ index 05160ce36285bc27cb7776bff15faf0a20e86354..413f56b2d34e9cabff083bb3121a2ce0
      extraData,
    });
  
-+  // TODO: maybe hide this behind if(__VIBECODE__)
++  // TODO: maybe hide this behind if(__NETSIGHT__)
 +  reportExceptionToNative(data, e);
 +  console.log(e);
 +  return;
@@ -481,7 +481,7 @@ index a8031aa3aede9e60d22cf94015607ace05441ff8..2f5615b2a50011882a5ef8b5131742b7
  
  typedef void (^RCTRedBoxButtonPressHandler)(void);
  
-+static NSString * const VibecodeRedBoxErrorShown = @"VibecodeRedBoxErrorShown";
++static NSString * const NetsightRedBoxErrorShown = @"NetsightRedBoxErrorShown";
 +
  @interface RCTRedBox : NSObject <RCTBridgeModule>
  
@@ -517,7 +517,7 @@ index fb057b969214ee3d4d691a8530a49c4a8f727c34..0a20ae4ed3dd08fa6ecd5e5efaf98ff4
 +      [stackDictionaries addObject:frameDict];
 +    }
 +    
-+    [[NSNotificationCenter defaultCenter] postNotificationName:VibecodeRedBoxErrorShown
++    [[NSNotificationCenter defaultCenter] postNotificationName:NetsightRedBoxErrorShown
 +                                                        object:self
 +                                                      userInfo:@{
 +                                                        @"message": message ?: @"",

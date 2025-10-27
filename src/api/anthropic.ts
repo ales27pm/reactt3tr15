@@ -11,7 +11,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { logWarn } from "../utils/logger";
 
 export const getAnthropicClient = () => {
-  const apiKey = process.env.EXPO_PUBLIC_VIBECODE_ANTHROPIC_API_KEY;
+  const apiKey = process.env.EXPO_PUBLIC_NETSIGHT_ANTHROPIC_API_KEY;
   if (!apiKey) {
     logWarn("Anthropic API key not found in environment variables", { context: "anthropic" });
   }
