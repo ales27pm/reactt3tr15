@@ -9,27 +9,6 @@ jest.mock("../../utils/logger", () => ({
   logError: jest.fn(),
 }));
 
-type SentryMockModule = {
-  init: jest.Mock;
-  Native: {
-    captureException: jest.Mock;
-    captureMessage: jest.Mock;
-    addBreadcrumb: jest.Mock;
-    configureScope: jest.Mock;
-    setTag: jest.Mock;
-    setExtra: jest.Mock;
-    close: jest.Mock;
-  };
-  __mock: {
-    reset: () => void;
-    getScope: () => { tags: Record<string, string>; extras: Record<string, unknown> };
-    getBreadcrumbs: () => Array<Record<string, unknown>>;
-    getCapturedErrors: () => Array<Record<string, unknown>>;
-    getInitCalls: () => Array<Record<string, unknown>>;
-    getCloseCallCount: () => number;
-  };
-};
-
 describe("crashReporter", () => {
   const resetEnv = () => {
     delete process.env.EXPO_PUBLIC_SENTRY_DSN;
@@ -40,7 +19,7 @@ describe("crashReporter", () => {
   };
 
   const loadCrashReporter = () => {
-    const sentry = require("sentry-expo") as SentryMockModule;
+    const sentry = require("sentry-expo") as typeof import("sentry-expo");
     sentry.__mock.reset();
     const crashReporter = require("../crashReporter") as typeof import("../crashReporter");
     return { crashReporter, sentry };

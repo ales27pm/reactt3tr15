@@ -70,7 +70,75 @@ goto fail
 :execute
 @rem Setup the command line
 
-set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
+set "WRAPPER_VERSION=8.13.0"
+set "WRAPPER_SHA256=81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f"
+set "REPO_WRAPPER_JAR=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar"
+set "WRAPPER_CACHE_ROOT=%GRADLE_USER_HOME%"
+if "%WRAPPER_CACHE_ROOT%"=="" set "WRAPPER_CACHE_ROOT=%USERPROFILE%\.gradle"
+set "WRAPPER_CACHE_DIR=%WRAPPER_CACHE_ROOT%\wrapper\dists\gradle-wrapper\%WRAPPER_VERSION%"
+set "CACHED_WRAPPER_JAR=%WRAPPER_CACHE_DIR%\gradle-wrapper.jar"
+
+call :validateWrapper "%REPO_WRAPPER_JAR%"
+if errorlevel 1 (
+    if exist "%REPO_WRAPPER_JAR%" (
+        echo WARNING: Ignoring unexpected Gradle wrapper at "%REPO_WRAPPER_JAR%". 1>&2
+    )
+) else (
+    call :validateWrapper "%CACHED_WRAPPER_JAR%"
+    if errorlevel 1 (
+        if not exist "%WRAPPER_CACHE_DIR%" mkdir "%WRAPPER_CACHE_DIR%" >NUL 2>&1
+        copy /Y "%REPO_WRAPPER_JAR%" "%CACHED_WRAPPER_JAR%" >NUL 2>&1
+        if errorlevel 1 (
+            echo WARNING: Unable to prime cached Gradle wrapper from "%REPO_WRAPPER_JAR%". 1>&2
+            del /Q "%CACHED_WRAPPER_JAR%" >NUL 2>&1
+        )
+    )
+)
+
+set "WRAPPER_JAR=%CACHED_WRAPPER_JAR%"
+
+call :validateWrapper "%WRAPPER_JAR%"
+if errorlevel 1 (
+    if exist "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" (
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "try {$ErrorActionPreference='Stop';$urls=@('https://downloads.gradle.org/distributions/gradle-8.13.0-wrapper.jar','https://services.gradle.org/distributions/gradle-8.13.0-wrapper.jar','https://downloads.gradle.org/distributions/gradle-8.13-wrapper.jar','https://services.gradle.org/distributions/gradle-8.13-wrapper.jar','https://raw.githubusercontent.com/gradle/gradle/v8.13.0/gradle/wrapper/gradle-wrapper.jar');$sha256='%WRAPPER_SHA256%';$cacheDir='%WRAPPER_CACHE_DIR%';$target='%CACHED_WRAPPER_JAR%';$tmp=[System.IO.Path]::GetTempFileName();$downloaded=$false;foreach($url in $urls){try{Invoke-WebRequest -Uri $url -OutFile $tmp -UseBasicParsing;$downloaded=$true;break;}catch{}}if(-not $downloaded){throw 'Unable to download Gradle wrapper jar from known sources.';}if((Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash.ToLower() -ne $sha256){throw 'Checksum mismatch while downloading Gradle wrapper.';}if(-not (Test-Path -LiteralPath $cacheDir)){New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null;}Move-Item -Force -LiteralPath $tmp -Destination $target;} catch {Write-Error $_; exit 1;} finally {if(Test-Path -LiteralPath $tmp){Remove-Item -Force $tmp}}" || goto downloadWrapperFailed
+    ) else (
+        echo ERROR: Gradle wrapper JAR is missing and PowerShell is unavailable to download it. 1>&2
+        goto fail
+    )
+)
+
+call :validateWrapper "%WRAPPER_JAR%"
+if errorlevel 1 goto downloadWrapperFailed
+set CLASSPATH=%WRAPPER_JAR%
+
+if /I "%WRAPPER_JAR%"=="%CACHED_WRAPPER_JAR%" (
+    if exist "%APP_HOME%\gradle\wrapper\gradle-wrapper.properties" (
+        if not exist "%WRAPPER_CACHE_DIR%" mkdir "%WRAPPER_CACHE_DIR%" >NUL 2>&1
+        copy /Y "%APP_HOME%\gradle\wrapper\gradle-wrapper.properties" "%WRAPPER_CACHE_DIR%\gradle-wrapper.properties" >NUL 2>&1
+    )
+)
+
+goto executeGradle
+
+:validateWrapper
+setlocal EnableDelayedExpansion
+set "FILE=%~1"
+if not exist "!FILE!" (
+    endlocal & exit /b 1
+)
+set "WRAPPER_VALID="
+for /f "usebackq delims=" %%I in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "try {$path = [System.IO.Path]::GetFullPath(\"!FILE!\"); if(-not (Test-Path -LiteralPath $path)){Write-Output 'False'; exit 0} $stream = [System.IO.File]::OpenRead($path); try {$buffer = New-Object byte[] 4; $read = $stream.Read($buffer,0,4);} finally {$stream.Dispose()} if($read -ne 4 -or $buffer[0] -ne 0x50 -or $buffer[1] -ne 0x4b -or $buffer[2] -ne 0x03 -or $buffer[3] -ne 0x04){Write-Output 'False'; exit 0} $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant(); if($hash -eq '%WRAPPER_SHA256%'){Write-Output 'True'} else {Write-Output 'False'}} catch {Write-Output 'False'}"`) do set "WRAPPER_VALID=%%I"
+if /I "!WRAPPER_VALID!"=="True" (
+    endlocal & exit /b 0
+) else (
+    endlocal & exit /b 1
+)
+
+:downloadWrapperFailed
+echo ERROR: Failed to provision the Gradle wrapper JAR. 1>&2
+goto fail
+
+:executeGradle
 
 
 @rem Execute Gradle

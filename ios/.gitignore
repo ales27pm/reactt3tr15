@@ -22,10 +22,10 @@ DerivedData
 *.xcuserstate
 project.xcworkspace
 ## Keep the generated workspace under source control for CI builds
-!vibecode.xcworkspace/
-!vibecode.xcworkspace/**
-!vibecode.xcodeproj/project.xcworkspace/
-!vibecode.xcodeproj/project.xcworkspace/**
+!Netsight.xcworkspace/
+!Netsight.xcworkspace/**
+!Netsight.xcodeproj/project.xcworkspace/
+!Netsight.xcodeproj/project.xcworkspace/**
 .xcode.env.local
 
 # Bundle artifacts
