@@ -110,5 +110,5 @@ jobs:
             -scheme Netsight \
             -configuration Release \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            -destination 'platform=iOS Simulator,OS=latest,name=iPhone 16' \
             build

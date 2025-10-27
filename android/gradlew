@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 #
 # Copyright © 2015-2021 the original authors.
@@ -114,9 +114,133 @@ case "$( uname )" in                #(
   NONSTOP* )        nonstop=true ;;
 esac
 
-WRAPPER_JAR=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
+WRAPPER_VERSION="8.13.0"
+WRAPPER_SHA256="81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f"
+REPO_WRAPPER_JAR=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
+CACHE_ROOT=${GRADLE_USER_HOME:-$HOME/.gradle}/wrapper/dists/gradle-wrapper
+CACHE_DIR=$CACHE_ROOT/$WRAPPER_VERSION
+CACHED_WRAPPER_JAR=$CACHE_DIR/gradle-wrapper.jar
+
+compute_sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | awk '{print $1}'
+        return 0
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | awk '{print $1}'
+        return 0
+    fi
+    return 1
+}
+
+has_zip_magic() {
+    if [ ! -f "$1" ]; then
+        return 1
+    fi
+
+    if command -v hexdump >/dev/null 2>&1; then
+        magic=$(LC_ALL=C hexdump -n 4 -ve '1/1 "%02x"' "$1" 2>/dev/null)
+    else
+        magic=$(LC_ALL=C od -An -tx1 -N4 "$1" 2>/dev/null | tr -d ' \n')
+    fi
+
+    [ "$magic" = "504b0304" ]
+}
+
+validate_wrapper_file() {
+    if [ ! -f "$1" ]; then
+        return 1
+    fi
+
+    if ! has_zip_magic "$1"; then
+        return 1
+    fi
+
+    checksum=$(compute_sha256 "$1" 2>/dev/null || true)
+    if [ -n "$checksum" ] && [ "$checksum" != "$WRAPPER_SHA256" ]; then
+        return 1
+    fi
+
+    return 0
+}
+
+if validate_wrapper_file "$REPO_WRAPPER_JAR"; then
+    if ! validate_wrapper_file "$CACHED_WRAPPER_JAR"; then
+        mkdir -p "$CACHE_DIR" || die "Unable to create Gradle wrapper cache directory"
+        if ! cp "$REPO_WRAPPER_JAR" "$CACHED_WRAPPER_JAR" >/dev/null 2>&1; then
+            warn "Unable to prime cached Gradle wrapper from $REPO_WRAPPER_JAR"
+            rm -f "$CACHED_WRAPPER_JAR"
+        fi
+    fi
+else
+    if [ -f "$REPO_WRAPPER_JAR" ]; then
+        warn "Gradle wrapper JAR at $REPO_WRAPPER_JAR does not match the expected distribution and will be ignored."
+    fi
+fi
+
+WRAPPER_JAR=$CACHED_WRAPPER_JAR
+
+if ! validate_wrapper_file "$WRAPPER_JAR"; then
+    DOWNLOAD_SOURCES="https://downloads.gradle.org/distributions/gradle-8.13.0-wrapper.jar https://services.gradle.org/distributions/gradle-8.13.0-wrapper.jar https://downloads.gradle.org/distributions/gradle-8.13-wrapper.jar https://services.gradle.org/distributions/gradle-8.13-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.13.0/gradle/wrapper/gradle-wrapper.jar"
+    DOWNLOAD_TOOL=""
+    if command -v curl >/dev/null 2>&1; then
+        DOWNLOAD_TOOL="curl"
+    elif command -v wget >/dev/null 2>&1; then
+        DOWNLOAD_TOOL="wget"
+    fi
+
+    [ -n "$DOWNLOAD_TOOL" ] || die "Gradle wrapper JAR is missing. Install curl or wget so it can be downloaded automatically."
+
+    TMP_DIR=$(mktemp -d 2>/dev/null || mktemp -d -t gradle-wrapper)
+    trap 'rm -rf "$TMP_DIR"' EXIT HUP INT TERM
+
+    for SOURCE in $DOWNLOAD_SOURCES; do
+        if [ "$DOWNLOAD_TOOL" = "curl" ]; then
+            if curl --fail --location --silent --show-error "$SOURCE" --output "$TMP_DIR/gradle-wrapper.jar"; then
+                break
+            fi
+        else
+            if wget --quiet "$SOURCE" --output-document="$TMP_DIR/gradle-wrapper.jar"; then
+                break
+            fi
+        fi
+        rm -f "$TMP_DIR/gradle-wrapper.jar"
+    done
+
+    if [ ! -f "$TMP_DIR/gradle-wrapper.jar" ]; then
+        rm -rf "$TMP_DIR"
+        trap - EXIT HUP INT TERM
+        die "Downloading Gradle wrapper failed from all known sources"
+    fi
+
+    VERIFY_SUM=$(compute_sha256 "$TMP_DIR/gradle-wrapper.jar" 2>/dev/null || true)
+
+    if [ -n "$VERIFY_SUM" ] && [ "$VERIFY_SUM" != "$WRAPPER_SHA256" ]; then
+        rm -rf "$TMP_DIR"
+        trap - EXIT HUP INT TERM
+        die "Gradle wrapper download checksum mismatch (expected $WRAPPER_SHA256, got $VERIFY_SUM)"
+    fi
+
+    mkdir -p "$CACHE_DIR" || die "Unable to create Gradle wrapper cache directory"
+    mv "$TMP_DIR/gradle-wrapper.jar" "$CACHED_WRAPPER_JAR" || die "Unable to move Gradle wrapper into place"
+    rm -rf "$TMP_DIR"
+    trap - EXIT HUP INT TERM
+fi
+
+if ! validate_wrapper_file "$CACHED_WRAPPER_JAR"; then
+    die "Cached Gradle wrapper at $CACHED_WRAPPER_JAR is invalid"
+fi
+
+WRAPPER_JAR=$CACHED_WRAPPER_JAR
 
 CLASSPATH=$WRAPPER_JAR
+
+if [ "$WRAPPER_JAR" = "$CACHED_WRAPPER_JAR" ]; then
+    PROPERTIES_SOURCE=$APP_HOME/gradle/wrapper/gradle-wrapper.properties
+    PROPERTIES_TARGET=$CACHE_DIR/gradle-wrapper.properties
+    if [ -f "$PROPERTIES_SOURCE" ]; then
+        cp "$PROPERTIES_SOURCE" "$PROPERTIES_TARGET" || die "Unable to sync Gradle wrapper properties into cache"
+    fi
+fi
 
 
 # Determine the Java command to use to start the JVM.
@@ -207,7 +331,7 @@ fi
 DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
 
 # Collect all arguments for the java command:
-#   * DEFAULT_JVM_OPTS, JAVA_OPTS, JAVA_OPTS, and optsEnvironmentVar are not allowed to contain shell fragments,
+#   * DEFAULT_JVM_OPTS, JAVA_OPTS, and optsEnvironmentVar are not allowed to contain shell fragments,
 #     and any embedded shellness will be escaped.
 #   * For example: A user cannot expect ${Hostname} to be expanded, as it is an environment variable and will be
 #     treated as '${Hostname}' itself on the command line.

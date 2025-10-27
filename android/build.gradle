@@ -7,7 +7,7 @@ buildscript {
   }
   dependencies {
     def agpVersion = findProperty("android.agpVersion")?.toString() ?: "8.5.2"
-    def kotlinVersion = findProperty("android.kotlinVersion")?.toString() ?: "1.9.24"
+    def kotlinVersion = findProperty("android.kotlinVersion")?.toString() ?: "2.0.21"
 
     classpath("com.android.tools.build:gradle:${agpVersion}")
     classpath('com.facebook.react:react-native-gradle-plugin')
@@ -21,6 +21,8 @@ ext {
   minSdkVersion = Integer.parseInt(findProperty("android.minSdkVersion")?.toString() ?: "24")
   buildToolsVersion = findProperty("android.buildToolsVersion")?.toString() ?: "35.0.0"
   ndkVersion = findProperty("android.ndkVersion")?.toString() ?: "26.1.10909125"
+  kotlinVersion = findProperty("android.kotlinVersion")?.toString() ?: "2.0.21"
+  kspVersion = findProperty("android.kspVersion")?.toString() ?: "2.0.21-1.0.28"
 }
 
 def reactNativePackageJson = providers.exec {
