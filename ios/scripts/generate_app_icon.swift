@@ -22,7 +22,10 @@ let image = NSImage(size: iconSize)
 image.lockFocus()
 
 NSGraphicsContext.current?.shouldAntialias = true
-let context = NSGraphicsContext.current!.cgContext
+guard let context = NSGraphicsContext.current?.cgContext else {
+    fputs("error: Failed to obtain graphics context\n", stderr)
+    exit(2)
+}
 context.setShouldAntialias(true)
 
 // Background

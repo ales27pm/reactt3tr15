@@ -93,7 +93,7 @@ Be proactive in using the existing implementations provided.
 
 ### Common mistakes to avoid when implementing image Generating functionality
 - Trying to implement it your own way (you will use an old model and the user will be disappointed)
-- Not being resourceful and forgetting to use this function when asked for features related to image generation, like an "icon generator" or "IG story graphic generator" etc
+- Not being resourceful and forgetting to use this function when asked for features related to image generation, like an "icon generator" or "IG story graphic generator" etc.
 - Not handling the wait time gracefully, or early aborting (results often takes 60+ seconds to return)
 - Not passing in the correct params for into the options for the Netsight maintained endpoint
 

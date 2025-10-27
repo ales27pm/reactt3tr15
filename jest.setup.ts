@@ -23,7 +23,7 @@ type CapturedError = {
 
 type CapturedMessage = {
   message: string;
-  context?: { level?: string; extras?: Record<string, unknown> };
+  context?: { level?: string; extra?: Record<string, unknown> };
 };
 
 type Scope = {
