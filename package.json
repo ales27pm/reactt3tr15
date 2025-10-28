@@ -12,6 +12,7 @@
     "lint:fix": "eslint . --fix",
     "test": "jest",
     "check:binaries": "node scripts/check-binaries.mjs",
+    "gradle:wrapper:download": "node scripts/download-gradle-wrapper.mjs",
     "test:e2e:ios": "detox test --configuration ios.sim.release",
     "test:e2e:android": "detox test --configuration android.emu.release",
     "detox:build:ios": "detox build --configuration ios.sim.release",
