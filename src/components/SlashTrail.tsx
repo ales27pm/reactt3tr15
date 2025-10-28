@@ -1,8 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { View, StyleSheet } from "react-native";
-import { Canvas, Path, Skia } from "@shopify/react-native-skia";
+import Svg, { Polyline } from "react-native-svg";
 
-export interface Point { x: number; y: number; timestamp: number }
+export interface Point {
+  x: number;
+  y: number;
+  timestamp: number;
+}
 
 interface SlashTrailProps {
   isActive: boolean;
@@ -23,7 +27,7 @@ export default function SlashTrail({ isActive, initialPoint, registerAddPoint }:
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
-      setTrails(prev => prev.filter(t => t.points.length && now - t.points[0].timestamp < SLASH_LIFETIME));
+      setTrails((prev) => prev.filter((t) => t.points.length && now - t.points[0].timestamp < SLASH_LIFETIME));
     }, 100);
     return () => clearInterval(interval);
   }, []);
@@ -31,12 +35,12 @@ export default function SlashTrail({ isActive, initialPoint, registerAddPoint }:
   // start a new trail when activated with an initial point
   useEffect(() => {
     if (isActive && initialPoint) {
-      setTrails(prev => [...prev, { id: trailId.current++, points: [initialPoint] }]);
+      setTrails((prev) => [...prev, { id: trailId.current++, points: [initialPoint] }]);
     }
   }, [isActive, initialPoint]);
 
   const addPoint = (p: Point) => {
-    setTrails(prev => {
+    setTrails((prev) => {
       if (prev.length === 0) {
         // seed a new trail if none exists yet
         return [{ id: trailId.current++, points: [p] }];
@@ -44,7 +48,8 @@ export default function SlashTrail({ isActive, initialPoint, registerAddPoint }:
       const next = [...prev];
       const last = next[next.length - 1];
       const lp = last.points[last.points.length - 1];
-      const dx = p.x - lp.x; const dy = p.y - lp.y;
+      const dx = p.x - lp.x;
+      const dy = p.y - lp.y;
       const dist2 = dx * dx + dy * dy;
       const dt = p.timestamp - lp.timestamp;
       if (dist2 < 9 || dt < 8) return prev; // min spacing and time throttle
@@ -59,44 +64,40 @@ export default function SlashTrail({ isActive, initialPoint, registerAddPoint }:
     if (registerAddPoint) registerAddPoint(addPoint);
   }, [registerAddPoint]);
 
-  if (trails.length === 0) return null;
+  const drawableTrails = trails.filter((trail) => trail.points.length > 1);
+
+  if (drawableTrails.length === 0) return null;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Canvas style={StyleSheet.absoluteFill}>
-        {trails.map(trail => (
-          <React.Fragment key={`trail-${trail.id}`}>
-            <Path
-              path={createPath(trail.points)}
-              style="stroke"
-              strokeWidth={SLASH_WIDTH * 1.8}
-              color={SLASH_COLOR}
-              strokeJoin="round"
-              strokeCap="round"
-              opacity={computeOpacity(trail.points) * 0.25}
-            />
-            <Path
-              path={createPath(trail.points)}
-              style="stroke"
-              strokeWidth={SLASH_WIDTH}
-              color={SLASH_COLOR}
-              strokeJoin="round"
-              strokeCap="round"
-              opacity={computeOpacity(trail.points)}
-            />
-          </React.Fragment>
-        ))}
-      </Canvas>
+      <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+        {drawableTrails.map((trail) => {
+          const pointsAttr = trail.points.map((point) => `${point.x},${point.y}`).join(" ");
+          const opacity = computeOpacity(trail.points);
+          return (
+            <React.Fragment key={`trail-${trail.id}`}>
+              <Polyline
+                points={pointsAttr}
+                stroke={SLASH_COLOR}
+                strokeWidth={SLASH_WIDTH * 1.8}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                opacity={opacity * 0.25}
+              />
+              <Polyline
+                points={pointsAttr}
+                stroke={SLASH_COLOR}
+                strokeWidth={SLASH_WIDTH}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                opacity={opacity}
+              />
+            </React.Fragment>
+          );
+        })}
+      </Svg>
     </View>
   );
-}
-
-function createPath(points: Point[]) {
-  const path = Skia.Path.Make();
-  if (!points.length) return path;
-  path.moveTo(points[0].x, points[0].y);
-  for (let i = 1; i < points.length; i++) path.lineTo(points[i].x, points[i].y);
-  return path;
 }
 
 function computeOpacity(points: Point[]) {

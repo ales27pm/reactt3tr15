@@ -12,9 +12,9 @@ jest.mock("../../utils/logger", () => ({
 
 describe("appStore", () => {
   const storageKey = "app-store";
-  const persist = (useAppStore as typeof useAppStore & {
+  const { persist } = useAppStore as typeof useAppStore & {
     persist: { rehydrate: () => Promise<void> };
-  }).persist;
+  };
 
   beforeEach(async () => {
     jest.useFakeTimers();
@@ -125,7 +125,7 @@ describe("appStore", () => {
       useAppStore.getState().registerNotificationSchedule("2024-01-02T10:00:00.000Z");
     });
 
-    const notifications = useAppStore.getState().notifications;
+    const { notifications } = useAppStore.getState();
     expect(notifications.reminderTime).toBe("21:30");
     expect(notifications.lastScheduledAt).toBe("2024-01-02T10:00:00.000Z");
 
