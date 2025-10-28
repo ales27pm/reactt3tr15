@@ -110,7 +110,6 @@ interface _TetrisState {
   level: number;
   lines: number;
   difficultyProgress: number;
-  difficultyTier: DifficultyTier;
   activePieceSpawnedAt: number | null;
   gameOver: boolean;
   paused: boolean;
@@ -144,7 +143,6 @@ export const useTetrisStore = create<any>()(
       level: 0,
       lines: 0,
       difficultyProgress: 0,
-      difficultyTier: resolveDifficultyTier(0),
       activePieceSpawnedAt: null,
       gameOver: false,
       paused: false,
@@ -184,7 +182,6 @@ export const useTetrisStore = create<any>()(
           level: 0,
           lines: 0,
           difficultyProgress: 0,
-          difficultyTier: resolveDifficultyTier(0),
           activePieceSpawnedAt: now,
           gameOver: false,
           paused: false,
@@ -397,7 +394,6 @@ function lockAndSpawn() {
     lines: newLines,
     level: difficultySnapshot.level,
     difficultyProgress: difficultySnapshot.progress,
-    difficultyTier: difficultySnapshot.tier,
     score: score + add,
     highScore: Math.max(highScore, score + add),
     canHold: true,
