@@ -63,6 +63,9 @@ jobs:
             echo "present=false" >> "$GITHUB_OUTPUT"
             echo "::warning::Gradle wrapper was not generated; skipping Android build steps."
           fi
+      - name: Download Gradle wrapper jar
+        if: steps.ensure_gradlew.outputs.present == 'true'
+        run: npm run gradle:wrapper:download
       - name: Grant execute permissions for Gradlew
         if: steps.ensure_gradlew.outputs.present == 'true'
         run: chmod +x android/gradlew
