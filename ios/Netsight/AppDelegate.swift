@@ -1,7 +1,6 @@
 import Expo
 import React
 import ReactAppDependencyProvider
-import UIKit
 
 @UIApplicationMain
 public class AppDelegate: ExpoAppDelegate {
@@ -28,7 +27,6 @@ public class AppDelegate: ExpoAppDelegate {
       withModuleName: "main",
       in: window,
       launchOptions: launchOptions)
-    window?.makeKeyAndVisible()
 #endif
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
@@ -59,7 +57,7 @@ class ReactNativeDelegate: ExpoReactNativeFactoryDelegate {
 
   override func sourceURL(for bridge: RCTBridge) -> URL? {
     // needed to return the correct URL for expo-dev-client.
-    return bridge.bundleURL ?? bundleURL()
+    bridge.bundleURL ?? bundleURL()
   }
 
   override func bundleURL() -> URL? {

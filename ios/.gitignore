@@ -21,11 +21,6 @@ DerivedData
 *.ipa
 *.xcuserstate
 project.xcworkspace
-## Keep the generated workspace under source control for CI builds
-!Netsight.xcworkspace/
-!Netsight.xcworkspace/**
-!Netsight.xcodeproj/project.xcworkspace/
-!Netsight.xcodeproj/project.xcworkspace/**
 .xcode.env.local
 
 # Bundle artifacts
