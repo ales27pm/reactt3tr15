@@ -17,7 +17,8 @@
     "detox:build:ios": "detox build --configuration ios.sim.release",
     "detox:build:android": "detox build --configuration android.emu.release",
     "push:github": "bash scripts/github.push.sh",
-    "agent:sync": "node scripts/manage-agents.mjs"
+    "agent:sync": "node scripts/manage-agents.mjs",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@expo/react-native-action-sheet": "^4.1.1",
@@ -145,7 +146,8 @@
   "private": true,
   "patchedDependencies": {
     "react-native@0.79.2": "patches/react-native@0.79.2.patch",
-    "expo-asset@11.1.5": "patches/expo-asset@11.1.5.patch"
+    "expo-asset@11.1.5": "patches/expo-asset@11.1.5.patch",
+    "@react-native-menu/menu@1.2.2": "patches/@react-native-menu+menu+1.2.2.patch"
   },
   "overrides": {
     "@shopify/react-native-skia": "1.2.3"
