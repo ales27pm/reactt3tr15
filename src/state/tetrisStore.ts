@@ -16,7 +16,57 @@ import {
   trySRSRotation,
 } from "./engine";
 
-const LOCK_DELAY_MS = 500;
+export const LOCK_DELAY_MS = 500;
+
+export type DifficultyTier = "Chill" | "Steady" | "Intense" | "Overdrive";
+
+const MAX_LEVEL = 29;
+const LEVEL_POINTS_PER_LEVEL = 12;
+const LINE_CLEAR_WEIGHTS = [0, 2, 5, 8, 12];
+const COMBO_WEIGHT = 1.25;
+const SURVIVAL_BONUS = 0.25;
+
+export interface DifficultyProgressInput {
+  previousProgress: number;
+  linesCleared: number;
+  comboCount: number;
+  lockDurationMs: number;
+}
+
+export interface DifficultyProgressSnapshot {
+  progress: number;
+  level: number;
+  delta: number;
+  tier: DifficultyTier;
+}
+
+export const resolveDifficultyTier = (level: number): DifficultyTier => {
+  if (level >= 12) return "Overdrive";
+  if (level >= 7) return "Intense";
+  if (level >= 3) return "Steady";
+  return "Chill";
+};
+
+export const calculateDifficultyProgress = ({
+  previousProgress,
+  linesCleared,
+  comboCount,
+  lockDurationMs,
+}: DifficultyProgressInput): DifficultyProgressSnapshot => {
+  const clampedLines = Math.max(0, Math.min(linesCleared, LINE_CLEAR_WEIGHTS.length - 1));
+  const base = LINE_CLEAR_WEIGHTS[clampedLines];
+  const comboBonus = clampedLines > 0 ? Math.max(comboCount - 1, 0) * COMBO_WEIGHT : 0;
+  let lockBonus = 0;
+  if (lockDurationMs <= LOCK_DELAY_MS) lockBonus = 1.5;
+  else if (lockDurationMs <= LOCK_DELAY_MS * 2) lockBonus = 1;
+  else if (lockDurationMs <= LOCK_DELAY_MS * 3) lockBonus = 0.5;
+  const survivalBonus = clampedLines === 0 ? SURVIVAL_BONUS : 0;
+  const delta = base + comboBonus + lockBonus + survivalBonus;
+  const progress = previousProgress + delta;
+  const level = Math.min(MAX_LEVEL, Math.floor(progress / LEVEL_POINTS_PER_LEVEL));
+  const tier = resolveDifficultyTier(level);
+  return { progress, level, delta, tier };
+};
 
 const generateBag = (): PieceType[] => {
   const bag = [...PIECE_TYPES];
@@ -42,6 +92,9 @@ interface _TetrisState {
   score: number;
   level: number;
   lines: number;
+  difficultyProgress: number;
+  difficultyTier: DifficultyTier;
+  activePieceSpawnedAt: number | null;
   gameOver: boolean;
   paused: boolean;
   highScore: number;
@@ -73,6 +126,9 @@ export const useTetrisStore = create<any>()(
       score: 0,
       level: 0,
       lines: 0,
+      difficultyProgress: 0,
+      difficultyTier: resolveDifficultyTier(0),
+      activePieceSpawnedAt: null,
       gameOver: false,
       paused: false,
       highScore: 0,
@@ -100,6 +156,7 @@ export const useTetrisStore = create<any>()(
         const nextQueue = ensureQueue([], 14);
         const first = nextQueue.shift()!;
         const currentPiece = createPiece(first);
+        const now = Date.now();
         set({
           grid: createEmptyGrid(),
           currentPiece,
@@ -109,6 +166,9 @@ export const useTetrisStore = create<any>()(
           score: 0,
           level: 0,
           lines: 0,
+          difficultyProgress: 0,
+          difficultyTier: resolveDifficultyTier(0),
+          activePieceSpawnedAt: now,
           gameOver: false,
           paused: false,
           combo: 0,
@@ -209,7 +269,13 @@ export const useTetrisStore = create<any>()(
           set({ gameOver: true });
           return;
         }
-        set({ currentPiece: newCurrent, holdPiece: newHold, canHold: false, lockExpireAt: null });
+        set({
+          currentPiece: newCurrent,
+          holdPiece: newHold,
+          canHold: false,
+          lockExpireAt: null,
+          activePieceSpawnedAt: Date.now(),
+        });
       },
 
       pauseGame: () => set((s: any) => ({ paused: !s.paused })),
@@ -253,7 +319,8 @@ export const useTetrisStore = create<any>()(
 
 // Internal helper that reads/writes store state directly
 function lockAndSpawn() {
-  const { grid, currentPiece, lines, level, score, highScore, nextQueue } = useTetrisStore.getState();
+  const { grid, currentPiece, lines, level, score, highScore, nextQueue, difficultyProgress, activePieceSpawnedAt } =
+    useTetrisStore.getState();
   if (!currentPiece) return;
   const placed = placePiece(grid, currentPiece);
   const { newGrid, linesCleared, clearedRows } = clearLines(placed);
@@ -276,7 +343,15 @@ function lockAndSpawn() {
   }
 
   const newLines = lines + linesCleared;
-  const newLevel = Math.floor(newLines / 10);
+  const now = Date.now();
+  const spawnAt = activePieceSpawnedAt ?? now - LOCK_DELAY_MS * 4;
+  const lockDuration = Math.max(0, now - spawnAt);
+  const difficultySnapshot = calculateDifficultyProgress({
+    previousProgress: difficultyProgress,
+    linesCleared,
+    comboCount: combo,
+    lockDurationMs: lockDuration,
+  });
   let q = ensureQueue(nextQueue, 7);
   const head = q.shift()!;
   const newCurrent = createPiece(head);
@@ -287,15 +362,18 @@ function lockAndSpawn() {
     currentPiece: over ? null : newCurrent,
     nextQueue: q,
     lines: newLines,
-    level: newLevel,
+    level: difficultySnapshot.level,
+    difficultyProgress: difficultySnapshot.progress,
+    difficultyTier: difficultySnapshot.tier,
     score: score + add,
     highScore: Math.max(highScore, score + add),
     canHold: true,
     lockExpireAt: null,
     lastClearedRows: linesCleared > 0 ? clearedRows : null,
-    lastLockAt: Date.now(),
+    lastLockAt: now,
     combo,
     backToBack: b2b,
+    activePieceSpawnedAt: over ? null : now,
     gameOver: over,
   });
 }
