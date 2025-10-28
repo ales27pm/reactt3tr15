@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { logWarn } from "../utils/logger";
 import { PIECE_TYPES, PieceType } from "./tetrominoes";
 import {
   CurrentPiece,
@@ -26,6 +27,20 @@ const LINE_CLEAR_WEIGHTS = [0, 2, 5, 8, 12];
 const COMBO_WEIGHT = 1.25;
 const SURVIVAL_BONUS = 0.25;
 
+/**
+ * Difficulty tier thresholds.
+ * Update these values to change tier definitions globally.
+ */
+export const DIFFICULTY_TIER_THRESHOLDS = {
+  overdrive: 12,
+  intense: 7,
+  steady: 3,
+} as const;
+
+export const MAX_COMBO_COUNT = 40;
+const MIN_LOCK_DURATION_MS = 0;
+export const MAX_LOCK_DURATION_MS = LOCK_DELAY_MS * 6;
+
 export interface DifficultyProgressInput {
   previousProgress: number;
   linesCleared: number;
@@ -41,9 +56,9 @@ export interface DifficultyProgressSnapshot {
 }
 
 export const resolveDifficultyTier = (level: number): DifficultyTier => {
-  if (level >= 12) return "Overdrive";
-  if (level >= 7) return "Intense";
-  if (level >= 3) return "Steady";
+  if (level >= DIFFICULTY_TIER_THRESHOLDS.overdrive) return "Overdrive";
+  if (level >= DIFFICULTY_TIER_THRESHOLDS.intense) return "Intense";
+  if (level >= DIFFICULTY_TIER_THRESHOLDS.steady) return "Steady";
   return "Chill";
 };
 
@@ -54,12 +69,14 @@ export const calculateDifficultyProgress = ({
   lockDurationMs,
 }: DifficultyProgressInput): DifficultyProgressSnapshot => {
   const clampedLines = Math.max(0, Math.min(linesCleared, LINE_CLEAR_WEIGHTS.length - 1));
+  const safeComboCount = Math.min(Math.max(comboCount, 0), MAX_COMBO_COUNT);
+  const normalizedLockDuration = Math.min(Math.max(lockDurationMs, MIN_LOCK_DURATION_MS), MAX_LOCK_DURATION_MS);
   const base = LINE_CLEAR_WEIGHTS[clampedLines];
-  const comboBonus = clampedLines > 0 ? Math.max(comboCount - 1, 0) * COMBO_WEIGHT : 0;
+  const comboBonus = clampedLines > 0 ? Math.max(safeComboCount - 1, 0) * COMBO_WEIGHT : 0;
   let lockBonus = 0;
-  if (lockDurationMs <= LOCK_DELAY_MS) lockBonus = 1.5;
-  else if (lockDurationMs <= LOCK_DELAY_MS * 2) lockBonus = 1;
-  else if (lockDurationMs <= LOCK_DELAY_MS * 3) lockBonus = 0.5;
+  if (normalizedLockDuration <= LOCK_DELAY_MS) lockBonus = 1.5;
+  else if (normalizedLockDuration <= LOCK_DELAY_MS * 2) lockBonus = 1;
+  else if (normalizedLockDuration <= LOCK_DELAY_MS * 3) lockBonus = 0.5;
   const survivalBonus = clampedLines === 0 ? SURVIVAL_BONUS : 0;
   const delta = base + comboBonus + lockBonus + survivalBonus;
   const progress = previousProgress + delta;
@@ -344,7 +361,23 @@ function lockAndSpawn() {
 
   const newLines = lines + linesCleared;
   const now = Date.now();
-  const spawnAt = activePieceSpawnedAt ?? now - LOCK_DELAY_MS * 4;
+  let spawnAt: number;
+  if (activePieceSpawnedAt == null) {
+    const fallback = now - LOCK_DELAY_MS * 4;
+    if (process.env.NODE_ENV !== "production") {
+      logWarn(
+        "activePieceSpawnedAt was not set, using fallback value.",
+        { context: "Tetris" },
+        {
+          now,
+          fallback,
+        },
+      );
+    }
+    spawnAt = fallback;
+  } else {
+    spawnAt = activePieceSpawnedAt;
+  }
   const lockDuration = Math.max(0, now - spawnAt);
   const difficultySnapshot = calculateDifficultyProgress({
     previousProgress: difficultyProgress,
