@@ -1,7 +1,6 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { logDebug, logInfo } from "../utils/logger";
-import { trackRetentionEvent } from "../analytics/analyticsClient";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -83,13 +82,6 @@ export const scheduleDailyReminder = async (schedule: NotificationSchedule) => {
   });
 
   logInfo(`Scheduled reminder ${identifier}`, { context: "notifications" });
-  await trackRetentionEvent({
-    name: "Notification Scheduled",
-    properties: {
-      hour: schedule.hour,
-      minute: schedule.minute,
-    },
-  });
 
   return identifier;
 };

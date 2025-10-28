@@ -1,10 +1,5 @@
 import { act } from "react-test-renderer";
 import { useAppStore, getDefaultAppState } from "../appStore";
-import { trackRetentionEvent } from "../../analytics/analyticsClient";
-
-jest.mock("../../analytics/analyticsClient", () => ({
-  trackRetentionEvent: jest.fn().mockResolvedValue(undefined),
-}));
 
 describe("appStore", () => {
   beforeEach(() => {
@@ -18,7 +13,6 @@ describe("appStore", () => {
       },
       true,
     );
-    (trackRetentionEvent as jest.Mock).mockClear();
   });
 
   afterEach(() => {
@@ -33,7 +27,6 @@ describe("appStore", () => {
     const state = useAppStore.getState();
     expect(state.onboarding.completed).toBe(true);
     expect(state.rewards.some((reward) => reward.id === "onboarding_complete")).toBe(true);
-    expect(trackRetentionEvent).toHaveBeenCalledWith(expect.objectContaining({ name: "Onboarding Completed" }));
   });
 
   it("increments session metrics and calculates streaks across days", () => {

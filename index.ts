@@ -1,6 +1,5 @@
 //DO NOT REMOVE THIS CODE
 import { logInfo } from "./src/utils/logger";
-import { initCrashReporting } from "./src/monitoring/crashReporter";
 
 logInfo("Project ID is", { context: "index" }, process.env.EXPO_PUBLIC_NETSIGHT_PROJECT_ID);
 
@@ -12,8 +11,6 @@ LogBox.ignoreLogs(["Expo AV has been deprecated", "Disconnected from Metro"]);
 import { registerRootComponent } from "expo";
 
 import App from "./App";
-
-initCrashReporting();
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);
 // It also ensures that whether you load the app in Expo Go or in a native build,

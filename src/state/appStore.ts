@@ -5,7 +5,6 @@ import { differenceInCalendarDays } from "date-fns";
 import { evaluateRewards } from "../rewards/rewardEngine";
 import { getNextStep, ONBOARDING_STEPS, type OnboardingStep } from "../onboarding/constants";
 import { logInfo } from "../utils/logger";
-import { trackRetentionEvent } from "../analytics/analyticsClient";
 
 export type Reward = {
   id: string;
@@ -38,17 +37,11 @@ type NotificationState = {
   lastScheduledAt: string | null;
 };
 
-type AnalyticsState = {
-  enabled: boolean;
-  userId: string | null;
-};
-
 export type AppState = {
   onboarding: OnboardingState;
   session: SessionState;
   rewards: Reward[];
   notifications: NotificationState;
-  analytics: AnalyticsState;
 };
 
 type AppActions = {
@@ -61,8 +54,6 @@ type AppActions = {
   toggleReminders: (enabled: boolean) => void;
   setReminderTime: (time: string) => void;
   registerNotificationSchedule: (timestamp: string | null) => void;
-  setAnalyticsEnabled: (enabled: boolean) => void;
-  setAnalyticsUserId: (userId: string) => void;
   setHasHydrated: (value: boolean) => void;
 };
 
@@ -89,10 +80,6 @@ const defaultState: AppState = {
     remindersEnabled: false,
     reminderTime: "20:00",
     lastScheduledAt: null,
-  },
-  analytics: {
-    enabled: false,
-    userId: null,
   },
 };
 
@@ -150,19 +137,7 @@ export const useAppStore = create<AppStore>()(
             rewards: [...state.rewards, ...unlocked],
           };
         });
-        void trackRetentionEvent({
-          name: "Onboarding Completed",
-          properties: { completedAt },
-        });
-        if (unlockedCount > 0) {
-          void trackRetentionEvent({
-            name: "Reward Unlocked",
-            properties: {
-              count: unlockedCount,
-              source: "onboarding",
-            },
-          });
-        }
+        logInfo("Onboarding completed", { context: "onboarding" }, { completedAt, rewardsUnlocked: unlockedCount });
       },
       resetOnboarding: () => {
         set((state) => ({
@@ -176,6 +151,9 @@ export const useAppStore = create<AppStore>()(
             dailyStreak: 0,
             totalPlaySeconds: 0,
             recentSessions: [],
+            activeSessionStartedAt: null,
+            lastSessionAt: null,
+            lastSessionDay: null,
           },
         }));
       },
@@ -187,13 +165,7 @@ export const useAppStore = create<AppStore>()(
             activeSessionStartedAt: startedAt,
           },
         }));
-        void trackRetentionEvent({
-          name: "Session Started",
-          properties: {
-            startedAt,
-            sessionCount: get().session.sessionCount,
-          },
-        });
+        logInfo("Session started", { context: "session" }, { startedAt });
       },
       recordSessionEnd: (durationSeconds: number) => {
         const endedAt = new Date().toISOString();
@@ -233,25 +205,13 @@ export const useAppStore = create<AppStore>()(
           };
         });
 
-        void trackRetentionEvent({
-          name: "Session Completed",
-          properties: {
-            endedAt,
-            durationSeconds,
-            sessionCount: get().session.sessionCount,
-            streak: get().session.dailyStreak,
-          },
+        logInfo("Session completed", { context: "session" }, {
+          endedAt,
+          durationSeconds,
+          sessionCount: get().session.sessionCount,
+          streak: get().session.dailyStreak,
+          rewardsUnlocked: unlockedCount,
         });
-
-        if (unlockedCount > 0) {
-          void trackRetentionEvent({
-            name: "Reward Unlocked",
-            properties: {
-              count: unlockedCount,
-              source: "session",
-            },
-          });
-        }
       },
       toggleReminders: (enabled) => {
         set((state) => ({
@@ -278,22 +238,6 @@ export const useAppStore = create<AppStore>()(
           },
         }));
       },
-      setAnalyticsEnabled: (enabled) => {
-        set((state) => ({
-          analytics: {
-            ...state.analytics,
-            enabled,
-          },
-        }));
-      },
-      setAnalyticsUserId: (userId) => {
-        set((state) => ({
-          analytics: {
-            ...state.analytics,
-            userId,
-          },
-        }));
-      },
       setHasHydrated: (value) => {
         set({ hasHydrated: value });
       },
@@ -306,7 +250,6 @@ export const useAppStore = create<AppStore>()(
         session: state.session,
         rewards: state.rewards,
         notifications: state.notifications,
-        analytics: state.analytics,
       }),
       onRehydrateStorage: () => (state, error) => {
         if (!error) {

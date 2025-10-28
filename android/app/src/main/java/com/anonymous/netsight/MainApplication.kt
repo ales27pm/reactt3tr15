@@ -13,7 +13,6 @@ import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
 
-import com.netsight.network.NetworkDiagnosticsPackage
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
 
@@ -23,9 +22,7 @@ class MainApplication : Application(), ReactApplication {
         this,
         object : DefaultReactNativeHost(this) {
           override fun getPackages(): List<ReactPackage> {
-            val packages = PackageList(this).packages
-            packages.add(NetworkDiagnosticsPackage())
-            return packages
+            return PackageList(this).packages
           }
 
           override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"
