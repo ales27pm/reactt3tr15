@@ -12,6 +12,7 @@
     "lint:fix": "eslint . --fix",
     "test": "jest",
     "check:binaries": "node scripts/check-binaries.mjs",
+    "assets:generate": "node scripts/generate-branding-assets.mjs",
     "gradle:wrapper:download": "node scripts/download-gradle-wrapper.mjs",
     "test:e2e:ios": "detox test --configuration ios.sim.release",
     "test:e2e:android": "detox test --configuration android.emu.release",
@@ -19,7 +20,7 @@
     "detox:build:android": "detox build --configuration android.emu.release",
     "push:github": "bash scripts/github.push.sh",
     "agent:sync": "node scripts/manage-agents.mjs",
-    "postinstall": "patch-package"
+    "postinstall": "npm run assets:generate && patch-package"
   },
   "dependencies": {
     "@expo/react-native-action-sheet": "^4.1.1",

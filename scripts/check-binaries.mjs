@@ -68,34 +68,40 @@ const gitBinaryFiles = attrOutput
   .map((line) => line.split(":")[0]);
 
 let numstatOutput = "";
+let nameStatusOutput = "";
 try {
   numstatOutput = execSync("git diff --cached --numstat", { encoding: "utf8" });
+  nameStatusOutput = execSync("git diff --cached --name-status", { encoding: "utf8" });
 } catch (error) {
   // If diff fails (e.g. no staged changes), just keep going with an empty string.
   numstatOutput = "";
+  nameStatusOutput = "";
 }
+
+const deletedInIndex = new Set(
+  nameStatusOutput
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.split("\t"))
+    .filter(([status]) => status === "D")
+    .map(([, file]) => file)
+    .filter(Boolean),
+);
 
 const stagedBinaryFiles = numstatOutput
   .split("\n")
   .map((line) => line.trim())
   .filter((line) => line.startsWith("-\t-\t"))
   .map((line) => line.split("\t")[2] ?? "")
-  .filter(Boolean);
+  .filter((file) => file && !deletedInIndex.has(file));
 
-const allBinaryFindings = new Set([
-  ...binaryFiles,
-  ...gitBinaryFiles,
-  ...stagedBinaryFiles,
-]);
+const allBinaryFindings = new Set([...binaryFiles, ...gitBinaryFiles, ...stagedBinaryFiles]);
 
 if (allBinaryFindings.size > 0) {
   console.error("Binary files detected in repository:\n");
-  [...allBinaryFindings]
-    .sort((a, b) => a.localeCompare(b))
-    .forEach((file) => console.error(` - ${file}`));
-  console.error(
-    "\nRemove these files or replace them with text-based equivalents before pushing."
-  );
+  [...allBinaryFindings].sort((a, b) => a.localeCompare(b)).forEach((file) => console.error(` - ${file}`));
+  console.error("\nRemove these files or replace them with text-based equivalents before pushing.");
   process.exit(1);
 }
 
