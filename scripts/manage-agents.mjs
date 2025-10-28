@@ -16,7 +16,7 @@ const rootAgent = lines(
   "## Execution Contract",
   "- The repository is an Expo 53 / React Native 0.79 app that powers the React T3TR15 arcade experience. Every contribution must enhance the fast-paced Tetris gameplay loop while keeping the build production-ready.",
   "- No placeholders, stubs, mocks, or half-implemented features are ever permitted. Ship complete, functional code with thoughtful error handling and polish.",
-  "- Always understand the impacted modules before editing: inspect gameplay state, reward logic, and navigation flows so updates remain cohesive.",
+  "- Always understand the impacted modules before editing: inspect gameplay state, reward logic, onboarding flows, and navigation scaffolding so updates remain cohesive.",
   "",
   "## Required Workflow",
   "1. Install dependencies with `npm install` (or `bun install` if you intentionally opt into Bun).",
@@ -28,8 +28,10 @@ const rootAgent = lines(
   "",
   "## Architecture Overview",
   "- **State Management:** Zustand stores in `src/state` coordinate onboarding, Tetris gameplay loops, rewards, and notification preferences. Stores use AsyncStorage-backed persistence—extend them with immutable updates and mirrored unit tests in `__tests__`.",
+  "- **Main Loop:** `src/mainLoop/useMainLoop.ts` hooks into the React Native AppState to begin and end play sessions automatically. Any gameplay change that affects cadence must stay compatible with this hook.",
   "- **Design System:** Shared primitives live in `src/design-system` with tokens, animation helpers, and component wrappers built around NativeWind/Tailwind. New UI must consume these tokens and respect theming.",
   "- **Navigation:** Multi-stack navigation is implemented under `src/navigation` using React Navigation 7. Follow established navigator patterns, extend typed param lists, and keep linking/deep-link definitions synchronized.",
+  "- **Gameplay Rendering:** `src/screens/TetrisScreen.tsx` centralises gesture handling, haptics, and FX; coordinate with `src/components/MatrixRain.tsx` and `src/components/SlashTrail.tsx` when altering visuals.",
   "- **Utilities:** Centralised helpers (logging, retry semantics, ASCII rendering, SFX) exist in `src/utils`. Reuse them rather than reimplementing behaviour.",
   "",
   "## Implementation Directives",
@@ -38,7 +40,7 @@ const rootAgent = lines(
   "- Persisted data must remain backward compatible. Migrate Zustand schemas carefully and provide default migrations inside store initialisation when shapes change.",
   "",
   "## Documentation & Knowledge Management",
-  "- Keep `docs/` synchronized with the shipped Tetris experience (game design notes, scoring tables, UX rationale).",
+  "- Keep `docs/` synchronized with the shipped Tetris experience (game design notes, scoring tables, UX rationale). Update `docs/roadmap.md` whenever priorities shift so planning reflects the live backlog.",
   "- When introducing new subsystems, extend the AGENTS manifest so future contributors inherit the right context.",
   "",
   "## Agent Governance",
@@ -91,6 +93,7 @@ const docsAgent = lines(
   "- Keep documents up to date with the implemented Tetris experience. Whenever mechanics, UI flows, or scoring models change, update the matching markdown source in the same pull request.",
   "- Use descriptive section headings, tables, and bullet lists—avoid placeholder text. Include diagrams or ASCII tables when they clarify gameplay.",
   "- Cross-reference app modules using fully-qualified paths (e.g., `src/state/tetrisStore.ts`) so engineers can trace requirements to code.",
+  "- Maintain the roadmap in `docs/roadmap.md` alongside feature work; retire completed items and document new initiatives as they enter development.",
   "- Prefer American English spelling, wrap lines at ~120 characters, and use fenced code blocks for commands or configuration snippets.",
 );
 
@@ -126,16 +129,7 @@ const manifest = [
   { relativePath: path.join("scripts", "AGENTS.md"), content: scriptsAgent },
 ];
 
-const ignoredDirs = new Set([
-  "node_modules",
-  ".git",
-  "android",
-  "ios",
-  ".expo",
-  ".turbo",
-  "build",
-  "dist",
-]);
+const ignoredDirs = new Set(["node_modules", ".git", "android", "ios", ".expo", ".turbo", "build", "dist"]);
 
 async function ensureDirectory(filePath) {
   const dir = path.dirname(filePath);
