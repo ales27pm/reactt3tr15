@@ -44,7 +44,17 @@ const binaryFiles = [];
 
 for (const file of files) {
   const absolute = path.join(repoRoot, file);
-  const stats = fs.statSync(absolute);
+  let stats;
+  try {
+    stats = fs.statSync(absolute);
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      // The file was removed locally but not yet committed. Skip it so
+      // contributors can delete old binaries without tripping the guard.
+      continue;
+    }
+    throw error;
+  }
   if (!stats.isFile()) {
     continue;
   }

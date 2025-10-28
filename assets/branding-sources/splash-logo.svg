@@ -1,0 +1,19 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logo-block" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+    <linearGradient id="logo-shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8fafc" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#cbd5f5" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g transform="translate(80 32)">
+    <rect x="96" y="0" width="256" height="256" rx="48" fill="url(#logo-block)" />
+    <rect x="96" y="256" width="256" height="128" rx="48" fill="url(#logo-block)" />
+    <rect x="0" y="256" width="128" height="128" rx="48" fill="url(#logo-block)" />
+    <rect x="320" y="256" width="128" height="128" rx="48" fill="url(#logo-block)" />
+    <rect x="96" y="0" width="256" height="256" rx="48" fill="url(#logo-shine)" opacity="0.55" />
+  </g>
+</svg>
