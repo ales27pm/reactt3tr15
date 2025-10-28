@@ -42,17 +42,17 @@ const MIN_LOCK_DURATION_MS = 0;
 export const MAX_LOCK_DURATION_MS = LOCK_DELAY_MS * 6;
 
 export interface DifficultyProgressInput {
-  previousProgress: number;
-  linesCleared: number;
-  comboCount: number;
-  lockDurationMs: number;
+  readonly previousProgress: number;
+  readonly linesCleared: number;
+  readonly comboCount: number;
+  readonly lockDurationMs: number;
 }
 
 export interface DifficultyProgressSnapshot {
-  progress: number;
-  level: number;
-  delta: number;
-  tier: DifficultyTier;
+  readonly progress: number;
+  readonly level: number;
+  readonly delta: number;
+  readonly tier: DifficultyTier;
 }
 
 export const resolveDifficultyTier = (level: number): DifficultyTier => {
