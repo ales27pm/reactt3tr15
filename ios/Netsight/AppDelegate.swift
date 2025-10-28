@@ -1,3 +1,4 @@
+import UIKit
 import Expo
 import React
 import ReactAppDependencyProvider
@@ -27,6 +28,7 @@ public class AppDelegate: ExpoAppDelegate {
       withModuleName: "main",
       in: window,
       launchOptions: launchOptions)
+    window?.makeKeyAndVisible()
 #endif
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

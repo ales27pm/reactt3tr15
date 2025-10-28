@@ -5,7 +5,7 @@ React T3TR15 delivers a neon-soaked homage to classic Tetris. The app focuses on
 ## Core Loop
 - **Drop Blocks:** Tap or swipe to move, rotate, and hard drop falling tetrominoes. Gravity accelerates as levels increase.
 - **Clear Lines:** Clearing multiple lines at once increases the score multiplier and charges the glitch effects available in accessibility settings.
-- **Session Tracking:** Each play session is recorded in `src/state/appStore.ts`. Sessions update streaks, total time played, and feed into reward unlocking logic.
+- **Session Tracking:** Each play session is recorded in `src/state/appStore.ts`. Sessions update streaks, total time played, and feed into reward-unlocking logic.
 
 ## Player Progression
 - **Rewards:** The reward engine in `src/rewards/rewardEngine.ts` unlocks achievements for onboarding, consecutive sessions, and streak milestones. Rewards surface in the Rewards tab.
