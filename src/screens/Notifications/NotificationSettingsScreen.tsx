@@ -5,8 +5,6 @@ import type { MainTabParamList } from "../../navigation/types";
 import { useAppStore } from "../../state/appStore";
 import { scheduleDailyReminder, cancelScheduledReminders } from "../../notifications/notificationService";
 import { logError, logInfo } from "../../utils/logger";
-import { useFeatureFlagStore } from "../../state/featureFlagsStore";
-import NetworkDiagnosticsPanel from "../../components/network/NetworkDiagnosticsPanel";
 
 export type NotificationSettingsScreenProps = BottomTabScreenProps<MainTabParamList, "Settings">;
 
@@ -17,8 +15,6 @@ const NotificationSettingsScreen = () => {
   const toggleReminders = useAppStore((state) => state.toggleReminders);
   const setReminderTime = useAppStore((state) => state.setReminderTime);
   const registerNotificationSchedule = useAppStore((state) => state.registerNotificationSchedule);
-  const networkDiagnosticsEnabled = useFeatureFlagStore((state) => state.isEnabled("networkDiagnostics"));
-  const remoteConfigStatus = useFeatureFlagStore((state) => state.status);
   const [isScheduling, setIsScheduling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,18 +91,13 @@ const NotificationSettingsScreen = () => {
         </Pressable>
       </View>
       {error && <Text style={styles.error}>{error}</Text>}
-      {networkDiagnosticsEnabled ? (
-        <NetworkDiagnosticsPanel />
-      ) : (
-        <View style={styles.remoteConfigNotice} testID="network-diagnostics-disabled">
-          <Text style={styles.noticeTitle}>Network diagnostics disabled</Text>
-          <Text style={styles.noticeBody}>
-            Remote configuration has disabled diagnostics for this build. Check your feature flag service for rollout
-            status.
-          </Text>
-          <Text style={styles.noticeFootnote}>Status: {remoteConfigStatus}</Text>
-        </View>
-      )}
+      <View style={styles.tipCard} testID="settings-tip-card">
+        <Text style={styles.tipTitle}>Keep your streak alive</Text>
+        <Text style={styles.tipBody}>
+          Drop in for at least one match every day to earn bonus rewards and climb the leaderboard. Enable reminders to
+          get a gentle ping when it&apos;s time to play.
+        </Text>
+      </View>
     </View>
   );
 };
@@ -155,25 +146,21 @@ const styles = StyleSheet.create({
     color: "#f87171",
     marginTop: 16,
   },
-  remoteConfigNotice: {
+  tipCard: {
     backgroundColor: "#111827",
-    padding: 16,
+    padding: 20,
     borderRadius: 16,
-    marginTop: 16,
+    marginTop: 24,
   },
-  noticeTitle: {
+  tipTitle: {
     color: "#f8fafc",
     fontWeight: "700",
     marginBottom: 8,
     fontSize: 16,
   },
-  noticeBody: {
+  tipBody: {
     color: "#cbd5f5",
-    marginBottom: 12,
-  },
-  noticeFootnote: {
-    color: "#94a3b8",
-    fontSize: 12,
+    lineHeight: 20,
   },
 });
 

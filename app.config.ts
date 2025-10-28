@@ -16,26 +16,10 @@ const appConfig: ExpoConfig = {
     edgeToEdgeEnabled: true,
     package: "com.anonymous.netsight",
   },
-  plugins: [
-    [
-      "sentry-expo",
-      {
-        organization: process.env.SENTRY_ORG ?? "netsight",
-        project: process.env.SENTRY_PROJECT ?? "netsight-app",
-        url: process.env.SENTRY_URL,
-        setCommits: false,
-        deploy: process.env.SENTRY_DEPLOY,
-      },
-    ],
-  ],
   extra: {
     environment: process.env.EXPO_PUBLIC_APP_ENVIRONMENT ?? "development",
-    sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN ?? "",
-    remoteConfigUrl: process.env.EXPO_PUBLIC_REMOTE_CONFIG_URL ?? "https://cdn.netsight.app/config/v1/mobile.json",
-    featureFlagDefaults: {
-      networkDiagnostics: true,
-      allowPacketCapture: false,
-    },
+    leaderboardSyncUrl: process.env.EXPO_PUBLIC_LEADERBOARD_SYNC_URL ?? "https://cdn.reactt3tr15.com/leaderboard.json",
+    rewardWebhookUrl: process.env.EXPO_PUBLIC_REWARD_WEBHOOK_URL ?? "https://hooks.reactt3tr15.com/rewards",
   },
 };
 

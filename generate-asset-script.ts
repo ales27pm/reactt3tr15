@@ -1,78 +1,79 @@
 /*
 IMPORTANT NOTICE: DO NOT REMOVE
-This is a script that generates an image and saves it to the assets folder. 
-You should not use this script unless the user EXPLICITLY asks you to generate an asset.
-DO NOT PROACTIVELY GENERATE ASSETS FOR THE USER.
-
-You will need to update the prompt and the options (2nd parameter of the generateImage function) depending on your use case.
-options: {
-  size?: "1024x1024" | "1536x1024" | "1024x1536" | "auto";
-  quality?: "low" | "medium" | "high" | "auto";
-  format?: "png" | "jpeg" | "webp";
-  background?: undefined | "transparent";
-}
-
-If you need to generate many assets, REFACTOR THIS SCRIPT TO CONCURRENTLY GENERATE UP TO 3 ASSETS AT A TIME. If you do not, the bash tool may time out.
-use npx tsx generate-asset-script.ts to run this script.
+This script creates a lightweight SVG badge inspired by the React T3TR15 aesthetic.
+Only run it when a user explicitly requests a fresh asset—do not generate art proactively.
+use `npx tsx generate-asset-script.ts` to run this script.
 */
 /* eslint-disable no-console */
 
-import { generateImage } from "./src/api/image-generation";
 import * as fs from "fs";
 import * as path from "path";
-import { Readable } from "stream";
-import { finished } from "stream/promises";
+import { fileURLToPath } from "url";
 
-async function downloadImage(url: string, outputPath: string): Promise<void> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
-  }
+const OUTPUT_FILE = "t3tr15-badge.svg";
+const LOG_FILE = "assetGenerationLog";
 
-  const fileStream = fs.createWriteStream(outputPath);
-  // @ts-ignore - Node.js types are not fully compatible with the fetch API
-  await finished(Readable.fromWeb(response.body).pipe(fileStream));
-  console.log(`Image downloaded successfully to ${outputPath}`);
-}
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
-async function logImageGeneration(prompt: string, imageUrl: string): Promise<void> {
-  const logDir = path.join(__dirname, "logs");
-  const logFile = path.join(logDir, "imageGenerationsLog");
+const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="grid" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="blocks" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#14b8a6" />
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="12" result="coloredBlur" />
+      <feMerge>
+        <feMergeNode in="coloredBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#grid)" rx="32" />
+  <g transform="translate(96, 96)" filter="url(#glow)">
+    <rect x="0" y="0" width="96" height="96" fill="url(#blocks)" rx="18" />
+    <rect x="112" y="0" width="96" height="96" fill="url(#blocks)" rx="18" />
+    <rect x="112" y="112" width="96" height="96" fill="url(#blocks)" rx="18" />
+    <rect x="224" y="112" width="96" height="96" fill="url(#blocks)" rx="18" />
+    <rect x="224" y="224" width="96" height="96" fill="url(#blocks)" rx="18" />
+  </g>
+  <text x="256" y="420" font-family="'Courier New', monospace" font-size="56" fill="#f8fafc" text-anchor="middle">
+    REACT T3TR15
+  </text>
+</svg>`;
 
-  // Create logs directory if it doesn't exist
+async function logGeneration(outputPath: string): Promise<void> {
+  const logDir = path.join(moduleDir, "logs");
   if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir, { recursive: true });
   }
+  const logPath = path.join(logDir, LOG_FILE);
+  const entry = `[${new Date().toISOString()}] Generated ${path.basename(outputPath)}\n`;
+  await fs.promises.appendFile(logPath, entry, { encoding: "utf8" });
+}
 
-  const logEntry = `[${new Date().toISOString()}] Prompt: "${prompt}"\nImage URL: ${imageUrl}\n\n`;
-  fs.appendFileSync(logFile, logEntry);
+async function writeAsset(): Promise<string> {
+  const assetsDir = path.join(moduleDir, "assets");
+  if (!fs.existsSync(assetsDir)) {
+    fs.mkdirSync(assetsDir, { recursive: true });
+  }
+  const outputPath = path.join(assetsDir, OUTPUT_FILE);
+  await fs.promises.writeFile(outputPath, svgMarkup, { encoding: "utf8" });
+  await logGeneration(outputPath);
+  return outputPath;
 }
 
 async function main() {
   try {
-    //update this to
-    const prompt = "describe the asset you want to generate";
-
-    console.log("Generating image with prompt:", prompt);
-    const imageUrl = await generateImage(prompt, {
-      size: "1024x1024",
-      quality: "high",
-      format: "png",
-    });
-
-    console.log("Image generated successfully. URL:", imageUrl);
-
-    // Log the image generation
-    await logImageGeneration(prompt, imageUrl);
-
-    const outputPath = path.join(__dirname, "assets", "japanese-art-logo.png");
-    await downloadImage(imageUrl, outputPath);
-
-    console.log("Process completed successfully");
-    console.log("Image URL:", imageUrl);
-    console.log("Image saved to:", outputPath);
+    const outputPath = await writeAsset();
+    console.log("Generated neon badge for React T3TR15:", outputPath);
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Failed to generate asset", error);
+    process.exitCode = 1;
   }
 }
 

@@ -7,11 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-                13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-                3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-                BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-                A6F7C4C22F0C2F8F004A7F12 /* NetworkDiagnosticsModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A6F7C4C02F0C2F8F004A7F12 /* NetworkDiagnosticsModule.mm */; };
-                F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
+		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,10 +20,8 @@
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Netsight/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-                F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Netsight/AppDelegate.swift; sourceTree = "<group>"; };
-                F11748442D0722820044C1D9 /* Netsight-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Netsight-Bridging-Header.h"; path = "Netsight/Netsight-Bridging-Header.h"; sourceTree = "<group>"; };
-                A6F7C4BF2F0C2F8F004A7F12 /* NetworkDiagnosticsModule.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = NetworkDiagnosticsModule.h; path = Netsight/NetworkDiagnostics/NetworkDiagnosticsModule.h; sourceTree = "<group>"; };
-                A6F7C4C02F0C2F8F004A7F12 /* NetworkDiagnosticsModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = NetworkDiagnosticsModule.mm; path = Netsight/NetworkDiagnostics/NetworkDiagnosticsModule.mm; sourceTree = "<group>"; };
+		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Netsight/AppDelegate.swift; sourceTree = "<group>"; };
+		F11748442D0722820044C1D9 /* Netsight-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Netsight-Bridging-Header.h"; path = "Netsight/Netsight-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -38,17 +35,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-                13B07FAE1A68108700A75B9A /* Netsight */ = {
-                        isa = PBXGroup;
-                        children = (
-                                F11748412D0307B40044C1D9 /* AppDelegate.swift */,
-                                F11748442D0722820044C1D9 /* Netsight-Bridging-Header.h */,
-                                A6F7C4C12F0C2F8F004A7F12 /* NetworkDiagnostics */,
-                                BB2F792B24A3F905000567C9 /* Supporting */,
-                                13B07FB51A68108700A75B9A /* Images.xcassets */,
-                                13B07FB61A68108700A75B9A /* Info.plist */,
-                                AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-                        );
+		13B07FAE1A68108700A75B9A /* Netsight */ = {
+			isa = PBXGroup;
+			children = (
+				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
+				F11748442D0722820044C1D9 /* Netsight-Bridging-Header.h */,
+				BB2F792B24A3F905000567C9 /* Supporting */,
+				13B07FB51A68108700A75B9A /* Images.xcassets */,
+				13B07FB61A68108700A75B9A /* Info.plist */,
+				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
+			);
 			name = Netsight;
 			sourceTree = "<group>";
 		};
@@ -88,39 +84,29 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-                BB2F792B24A3F905000567C9 /* Supporting */ = {
-                        isa = PBXGroup;
-                        children = (
-                                BB2F792C24A3F905000567C9 /* Expo.plist */,
-                        );
-                        name = Supporting;
-                        path = Netsight/Supporting;
-                        sourceTree = "<group>";
-                };
-                A6F7C4C12F0C2F8F004A7F12 /* NetworkDiagnostics */ = {
-                        isa = PBXGroup;
-                        children = (
-                                A6F7C4C02F0C2F8F004A7F12 /* NetworkDiagnosticsModule.mm */,
-                                A6F7C4BF2F0C2F8F004A7F12 /* NetworkDiagnosticsModule.h */,
-                        );
-                        path = Netsight/NetworkDiagnostics;
-                        sourceTree = "<group>";
-                };
+		BB2F792B24A3F905000567C9 /* Supporting */ = {
+			isa = PBXGroup;
+			children = (
+				BB2F792C24A3F905000567C9 /* Expo.plist */,
+			);
+			name = Supporting;
+			path = Netsight/Supporting;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
 		13B07F861A680F5B00A75B9A /* Netsight */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Netsight" */;
-                        buildPhases = (
-                                08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-                                13B07F871A680F5B00A75B9A /* Sources */,
-                                13B07F8C1A680F5B00A75B9A /* Frameworks */,
-                                D4BAF8C82CBCA301007B7B70 /* Generate App Icon */,
-                                13B07F8E1A680F5B00A75B9A /* Resources */,
-                                00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
-                                800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-                        );
+			buildPhases = (
+				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
+				13B07F871A680F5B00A75B9A /* Sources */,
+				13B07F8C1A680F5B00A75B9A /* Frameworks */,
+				13B07F8E1A680F5B00A75B9A /* Resources */,
+				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
+				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
+			);
 			buildRules = (
 			);
 			dependencies = (
@@ -212,24 +198,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-                D4BAF8C82CBCA301007B7B70 /* Generate App Icon */ = {
-                        isa = PBXShellScriptBuildPhase;
-                        buildActionMask = 2147483647;
-                        files = (
-                        );
-                        inputPaths = (
-                                "$(PROJECT_DIR)/Netsight/Images.xcassets/AppIcon.appiconset/Contents.json",
-                                "$(PROJECT_DIR)/scripts/generate_app_icon.swift",
-                        );
-                        name = "Generate App Icon";
-                        outputPaths = (
-                                "$(PROJECT_DIR)/Netsight/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png",
-                        );
-                        runOnlyForDeploymentPostprocessing = 0;
-                        shellPath = /bin/sh;
-                        shellScript = "set -euo pipefail\nSCRIPT=\"$PROJECT_DIR/scripts/generate_app_icon.swift\"\nICON_DIR=\"$PROJECT_DIR/Netsight/Images.xcassets/AppIcon.appiconset\"\nICON=\"$ICON_DIR/App-Icon-1024x1024@1x.png\"\nif [ ! -f \"$SCRIPT\" ]; then\n  exit 0\nfi\nif [ ! -f \"$ICON\" ] || [ \"$SCRIPT\" -nt \"$ICON\" ] || [ \"$ICON_DIR/Contents.json\" -nt \"$ICON\" ]; then\n  /usr/bin/swift \"$SCRIPT\" \"$ICON\"\nfi\n";
-                };
-                800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
+		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -254,15 +223,14 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-                13B07F871A680F5B00A75B9A /* Sources */ = {
-                        isa = PBXSourcesBuildPhase;
-                        buildActionMask = 2147483647;
-                        files = (
-                                A6F7C4C22F0C2F8F004A7F12 /* NetworkDiagnosticsModule.mm in Sources */,
-                                F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-                        );
-                        runOnlyForDeploymentPostprocessing = 0;
-                };
+		13B07F871A680F5B00A75B9A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */

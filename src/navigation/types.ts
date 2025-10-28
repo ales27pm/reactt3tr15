@@ -4,8 +4,6 @@ import type { RouteProp } from "@react-navigation/native";
 export type RootStackParamList = {
   Onboarding: undefined;
   Main: undefined;
-  Rewards: undefined;
-  NotificationPreferences: undefined;
 };
 
 export type OnboardingStackParamList = {

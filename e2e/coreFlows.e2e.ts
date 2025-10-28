@@ -1,11 +1,11 @@
 import { device, element, by, expect } from "detox";
 
-describe("Core onboarding and diagnostics flows", () => {
+describe("Core onboarding and gameplay flows", () => {
   beforeAll(async () => {
     await device.launchApp({ delete: true, newInstance: true });
   });
 
-  it("completes onboarding and surfaces network diagnostics", async () => {
+  it("completes onboarding and surfaces reminder settings", async () => {
     await expect(element(by.id("onboarding-intro-get-started"))).toBeVisible();
     await element(by.id("onboarding-intro-get-started")).tap();
 
@@ -19,12 +19,6 @@ describe("Core onboarding and diagnostics flows", () => {
     await element(by.id("tab-settings")).tap();
 
     await expect(element(by.id("settings-reminders-switch"))).toBeVisible();
-    await expect(element(by.id("network-diagnostics-card"))).toBeVisible();
-    await expect(element(by.id("network-diagnostics-vpn-status"))).toBeVisible();
-
-    const scanButton = element(by.id("network-diagnostics-scan"));
-    await expect(scanButton).toBeVisible();
-    await scanButton.tap();
-    await expect(element(by.id("network-diagnostics-list-empty"))).toBeVisible();
+    await expect(element(by.id("settings-tip-card"))).toBeVisible();
   });
 });
