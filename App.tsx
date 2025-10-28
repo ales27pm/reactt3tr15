@@ -16,12 +16,12 @@ process.env.EXPO_PUBLIC_NETSIGHT_{key}
 
 Incorrect usage:
 import { OPENAI_API_KEY } from '@env';
-//don't use @env, its depreicated
+//don't use @env, it's deprecated
 
 Incorrect usage:
 import Constants from 'expo-constants';
 const openai_api_key = Constants.expoConfig.extra.apikey;
-//don't use expo-constants, its depreicated
+//don't use expo-constants, it's deprecated
 
 */
 

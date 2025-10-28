@@ -8,9 +8,12 @@ use `npx tsx generate-asset-script.ts` to run this script.
 
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
 
 const OUTPUT_FILE = "t3tr15-badge.svg";
 const LOG_FILE = "assetGenerationLog";
+
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <defs>
@@ -44,7 +47,7 @@ const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="5
 </svg>`;
 
 async function logGeneration(outputPath: string): Promise<void> {
-  const logDir = path.join(__dirname, "logs");
+  const logDir = path.join(moduleDir, "logs");
   if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir, { recursive: true });
   }
@@ -54,7 +57,7 @@ async function logGeneration(outputPath: string): Promise<void> {
 }
 
 async function writeAsset(): Promise<string> {
-  const assetsDir = path.join(__dirname, "assets");
+  const assetsDir = path.join(moduleDir, "assets");
   if (!fs.existsSync(assetsDir)) {
     fs.mkdirSync(assetsDir, { recursive: true });
   }
