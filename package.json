@@ -41,7 +41,7 @@
     "@react-navigation/native-stack": "^7.3.2",
     "@react-navigation/stack": "^7.1.1",
     "@shopify/flash-list": "1.7.6",
-    "@shopify/react-native-skia": "1.2.3",
+    "@shopify/react-native-skia": "2.3.7",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "expo": "^53.0.9",
@@ -106,7 +106,7 @@
     "react-native-markdown-display": "^7.0.2",
     "react-native-mmkv": "^3.2.0",
     "react-native-pager-view": "6.7.1",
-    "react-native-reanimated": "~3.17.4",
+    "react-native-reanimated": "~3.19.3",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.10.0",
     "react-native-svg": "15.11.2",
@@ -148,6 +148,6 @@
     "expo-asset@11.1.5": "patches/expo-asset@11.1.5.patch"
   },
   "overrides": {
-    "@shopify/react-native-skia": "1.2.3"
+    "@shopify/react-native-skia": "2.3.7"
   }
 }
