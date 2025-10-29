@@ -24,6 +24,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Validate AGENTS manifest
+        run: npm run agent:check
       - name: Ensure no binary files are tracked
         run: npm run check:binaries
       - name: Run ESLint
