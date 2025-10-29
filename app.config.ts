@@ -8,13 +8,28 @@ const appConfig: ExpoConfig = {
   orientation: "portrait",
   userInterfaceStyle: "light",
   newArchEnabled: true,
+  icon: "./assets/app-icon.png",
+  splash: {
+    image: "./assets/splash.png",
+    backgroundColor: "#050b1f",
+    resizeMode: "contain",
+  },
   ios: {
     supportsTablet: true,
     bundleIdentifier: "com.anonymous.netsight",
+    splash: {
+      image: "./assets/splash.png",
+      backgroundColor: "#050b1f",
+      resizeMode: "contain",
+    },
   },
   android: {
     edgeToEdgeEnabled: true,
     package: "com.anonymous.netsight",
+    adaptiveIcon: {
+      foregroundImage: "./assets/app-icon.png",
+      backgroundColor: "#050b1f",
+    },
   },
   extra: {
     environment: process.env.EXPO_PUBLIC_APP_ENVIRONMENT ?? "development",
