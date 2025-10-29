@@ -13,14 +13,19 @@ module.exports = {
     "ios.sim.release": {
       type: "ios.app",
       binaryPath: "ios/build/Build/Products/Release-iphonesimulator/Netsight.app",
-      build:
-        "EXPO_NO_TELEMETRY=1 EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 npx expo prebuild --platform ios --non-interactive --no-install && cd ios && xcodebuild -project Netsight.xcodeproj -scheme Netsight -configuration Release -sdk iphonesimulator -derivedDataPath build",
+      build: [
+        "EXPO_NO_TELEMETRY=1 EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 npx expo prebuild --platform ios --non-interactive",
+        "EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 npx pod-install",
+        "cd ios && EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 xcodebuild -workspace Netsight.xcworkspace -scheme Netsight -configuration Release -sdk iphonesimulator -derivedDataPath build",
+      ].join(" && "),
     },
     "android.emu.release": {
       type: "android.apk",
       binaryPath: "android/app/build/outputs/apk/release/app-release.apk",
-      build:
-        "EXPO_NO_TELEMETRY=1 EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 npx expo prebuild --platform android --non-interactive --no-install && cd android && ./gradlew assembleRelease",
+      build: [
+        "EXPO_NO_TELEMETRY=1 EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 npx expo prebuild --platform android --non-interactive --no-install",
+        "cd android && EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 ./gradlew assembleRelease",
+      ].join(" && "),
     },
   },
   devices: {
