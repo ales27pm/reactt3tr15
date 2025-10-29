@@ -43,8 +43,11 @@ ios/*/*.xcworkspace
 ios/*/*.xcuserstate
 ios/.xcode.env.local
 ios/.xcode.env.updates
-# Ignore generated app icon bitmaps so the repo remains binary-free
+# Ignore generated branding bitmaps so the repo remains binary-free
+assets/app-icon.png
+assets/splash.png
 ios/*/Images.xcassets/AppIcon.appiconset/*.png
+ios/*/Images.xcassets/SplashScreenLogo.imageset/*.png
 android/.gradle/
 android/.idea/
 android/local.properties

@@ -20,7 +20,7 @@ import Animated, {
   withTiming,
   type AnimatedStyleProp,
 } from "react-native-reanimated";
-import { useTetrisStore } from "../state/tetrisStore";
+import { resolveDifficultyTier, useTetrisStore } from "../state/tetrisStore";
 import { PIECES, GRID_WIDTH, GRID_HEIGHT } from "../state/tetrominoes";
 import { ghostDropY } from "../state/engine";
 import { getGlyphForColor } from "../utils/ascii";
@@ -54,6 +54,7 @@ export default function TetrisScreen() {
   const canHold = useTetrisStore((s) => s.canHold);
   const score = useTetrisStore((s) => s.score);
   const level = useTetrisStore((s) => s.level);
+  const difficultyTier = useTetrisStore((s) => resolveDifficultyTier(s.level));
   const lines = useTetrisStore((s) => s.lines);
   const gameOver = useTetrisStore((s) => s.gameOver);
   const paused = useTetrisStore((s) => s.paused);
@@ -602,6 +603,7 @@ export default function TetrisScreen() {
         <View style={styles.stats}>
           <Text style={styles.statText}>Score: {score}</Text>
           <Text style={styles.statText}>Level: {level}</Text>
+          <Text style={styles.statText}>Difficulty: {difficultyTier}</Text>
           <Text style={styles.statText}>Lines: {lines}</Text>
           <Text style={styles.statText}>Sessions: {sessionCount}</Text>
           <Text style={styles.statText}>Streak: {streak}</Text>
