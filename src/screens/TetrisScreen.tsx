@@ -29,6 +29,12 @@ import SlashTrail, { Point as SlashPoint } from "../components/SlashTrail";
 import { playSfx, setSfxEnabled } from "../utils/sfx";
 import MatrixRain from "../components/MatrixRain";
 import { useMainLoop } from "../mainLoop/useMainLoop";
+import {
+  dispatchSyntheticGamepadEvent,
+  isControllerDebugEnabled,
+  registerGameControllerInput,
+  type GamepadEventPayload,
+} from "../utils/input";
 
 const { width } = Dimensions.get("window");
 const BLOCK_SIZE = Math.min(width * 0.05, 20);
@@ -45,6 +51,7 @@ export default function TetrisScreen() {
   const insets = useSafeAreaInsets();
   const [demoErrorVisible, setDemoErrorVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const controllerDebugEnabled = isControllerDebugEnabled;
 
   // Selectors (narrow to reduce re-renders)
   const grid = useTetrisStore((s) => s.grid);
@@ -179,6 +186,10 @@ export default function TetrisScreen() {
     if (enableHaptics && Platform.OS === "ios") Vibration.vibrate(50);
   };
 
+  const emitControllerEvent = useCallback((event: GamepadEventPayload) => {
+    dispatchSyntheticGamepadEvent(event);
+  }, []);
+
   // Shared flags to avoid worklet reading React state directly
   const pausedSV = useSharedValue(paused ? 1 : 0);
   const gameOverSV = useSharedValue(gameOver ? 1 : 0);
@@ -223,6 +234,13 @@ export default function TetrisScreen() {
   useEffect(() => {
     if (gameOver && enableSfx) playSfx("gameover");
   }, [gameOver, enableSfx]);
+
+  useEffect(() => {
+    const registration = registerGameControllerInput();
+    return () => {
+      registration?.dispose();
+    };
+  }, []);
 
   // Slash trail state and registration
   const [isSlashActive, setIsSlashActive] = useState(false);
@@ -597,7 +615,7 @@ export default function TetrisScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View testID="tetris-screen" style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.title}>TETRIS</Text>
         <View style={styles.stats}>
@@ -619,7 +637,10 @@ export default function TetrisScreen() {
         <View style={styles.playArea}>
           {matrixRainEnabled && <MatrixRain />}
           <GestureDetector gesture={composedGesture}>
-            <Animated.View style={[styles.grid, gridAnimatedStyle, { width: PLAY_WIDTH, height: PLAY_HEIGHT }]}>
+            <Animated.View
+              testID="tetris-playfield"
+              style={[styles.grid, gridAnimatedStyle, { width: PLAY_WIDTH, height: PLAY_HEIGHT }]}
+            >
               {asciiMode ? (
                 <>
                   {showGhost && renderAsciiGhost()}
@@ -797,6 +818,36 @@ export default function TetrisScreen() {
         onSecondaryAction={() => setDemoErrorVisible(false)}
         onDismiss={() => setDemoErrorVisible(false)}
       />
+
+      {controllerDebugEnabled && (
+        <View pointerEvents="box-none" style={[styles.debugHarness, { top: insets.top + 12 }]}>
+          <Pressable
+            testID="controller-debug-pause"
+            style={styles.debugButton}
+            accessibilityLabel="Simulate controller pause"
+            onPress={() => emitControllerEvent({ type: "button", button: "start", pressed: true })}
+          >
+            <Text style={styles.debugButtonLabel}>P</Text>
+          </Pressable>
+          <Pressable
+            testID="controller-debug-hard-drop"
+            style={styles.debugButton}
+            accessibilityLabel="Simulate controller hard drop"
+            onPress={() => emitControllerEvent({ type: "button", button: "RB", pressed: true })}
+          >
+            <Text style={styles.debugButtonLabel}>HD</Text>
+          </Pressable>
+          <Pressable
+            testID="controller-debug-left-hold"
+            style={styles.debugButton}
+            accessibilityLabel="Simulate controller move left"
+            onPressIn={() => emitControllerEvent({ type: "button", button: "dpadLeft", pressed: true })}
+            onPressOut={() => emitControllerEvent({ type: "button", button: "dpadLeft", pressed: false })}
+          >
+            <Text style={styles.debugButtonLabel}>←</Text>
+          </Pressable>
+        </View>
+      )}
 
       <View style={styles.controls}>
         <View style={styles.controlRow}>
@@ -1014,4 +1065,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   settingText: { color: TERMINAL_GREEN, fontSize: 14 },
+  debugHarness: {
+    position: "absolute",
+    right: 12,
+    gap: 8,
+    alignItems: "flex-end",
+    zIndex: 30,
+  },
+  debugButton: {
+    width: 52,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(56,189,248,0.18)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: TERMINAL_GREEN,
+  },
+  debugButtonLabel: { color: TERMINAL_GREEN, fontSize: 12, fontWeight: "bold" },
 });

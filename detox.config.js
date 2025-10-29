@@ -14,13 +14,13 @@ module.exports = {
       type: "ios.app",
       binaryPath: "ios/build/Build/Products/Release-iphonesimulator/Netsight.app",
       build:
-        "EXPO_NO_TELEMETRY=1 npx expo prebuild --platform ios --non-interactive --no-install && cd ios && xcodebuild -project Netsight.xcodeproj -scheme Netsight -configuration Release -sdk iphonesimulator -derivedDataPath build",
+        "EXPO_NO_TELEMETRY=1 EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 npx expo prebuild --platform ios --non-interactive --no-install && cd ios && xcodebuild -project Netsight.xcodeproj -scheme Netsight -configuration Release -sdk iphonesimulator -derivedDataPath build",
     },
     "android.emu.release": {
       type: "android.apk",
       binaryPath: "android/app/build/outputs/apk/release/app-release.apk",
       build:
-        "EXPO_NO_TELEMETRY=1 npx expo prebuild --platform android --non-interactive --no-install && cd android && ./gradlew assembleRelease",
+        "EXPO_NO_TELEMETRY=1 EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 npx expo prebuild --platform android --non-interactive --no-install && cd android && ./gradlew assembleRelease",
     },
   },
   devices: {
