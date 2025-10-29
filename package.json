@@ -20,6 +20,7 @@
     "detox:build:android": "detox build --configuration android.emu.release",
     "push:github": "bash scripts/github.push.sh",
     "agent:sync": "node scripts/manage-agents.mjs",
+    "agent:check": "node scripts/manage-agents.mjs --check",
     "postinstall": "npm run assets:generate && patch-package"
   },
   "dependencies": {

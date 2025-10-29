@@ -106,6 +106,8 @@ const scriptsAgent = lines(
   "- Provide idempotent behaviour—rerunning a script should not produce divergent outcomes (e.g., `manage-agents.mjs` writes files only when content changes).",
   "- Document usage in script headers or README updates, and expose npm script aliases (see `package.json`).",
   "- Log actionable messages via `console.info`/`console.error` so CI and developers understand the outcome.",
+  "- Use `node scripts/manage-agents.mjs --check` (surfaced via `npm run agent:check`) to verify manifest coverage without mutating the repo.",
+  "- Keep the AGENTS manifest authoritative: `npm run agent:sync` will prune unmanaged AGENTS files in addition to creating and updating managed ones.",
 );
 
 const srcComponentsAgent = lines(
@@ -122,11 +124,11 @@ const srcComponentsAgent = lines(
 
 const manifest = [
   { relativePath: "AGENTS.md", content: rootAgent },
-  { relativePath: path.join("src", "AGENTS.md"), content: srcAgent },
-  { relativePath: path.join("src", "state", "AGENTS.md"), content: srcStateAgent },
-  { relativePath: path.join("src", "components", "AGENTS.md"), content: srcComponentsAgent },
   { relativePath: path.join("docs", "AGENTS.md"), content: docsAgent },
   { relativePath: path.join("scripts", "AGENTS.md"), content: scriptsAgent },
+  { relativePath: path.join("src", "AGENTS.md"), content: srcAgent },
+  { relativePath: path.join("src", "components", "AGENTS.md"), content: srcComponentsAgent },
+  { relativePath: path.join("src", "state", "AGENTS.md"), content: srcStateAgent },
 ];
 
 const ignoredDirs = new Set(["node_modules", ".git", "android", "ios", ".expo", ".turbo", "build", "dist"]);
@@ -136,24 +138,57 @@ async function ensureDirectory(filePath) {
   await fs.mkdir(dir, { recursive: true });
 }
 
-async function writeFileIfChanged(filePath, content) {
-  let existing = null;
+function parseFlags(argv) {
+  const supported = new Map([["--check", "Run without writing and fail if updates would occur."]]);
+  const flags = {
+    check: false,
+  };
+
+  for (const arg of argv) {
+    if (!supported.has(arg)) {
+      const recognised = Array.from(supported.keys()).join(", ") || "<none>";
+      throw new Error(
+        lines(
+          `Unknown flag: ${arg}`,
+          recognised === "<none>" ? "This script does not accept additional flags." : `Supported flags: ${recognised}`,
+        ),
+      );
+    }
+
+    if (arg === "--check") {
+      flags.check = true;
+    }
+  }
+
+  return flags;
+}
+
+async function ensureFileContent(filePath, content, { checkOnly }) {
+  let existingContent = null;
+  let exists = true;
   try {
-    existing = await fs.readFile(filePath, "utf8");
+    existingContent = await fs.readFile(filePath, "utf8");
   } catch (error) {
-    if (error.code !== "ENOENT") {
+    if (error.code === "ENOENT") {
+      exists = false;
+    } else {
       throw error;
     }
   }
 
   const normalised = `${content}\n`;
-  if (existing === normalised) {
-    return false;
+  if (exists && existingContent === normalised) {
+    return { changed: false };
+  }
+
+  if (checkOnly) {
+    return { changed: true, reason: exists ? "outdated" : "missing" };
   }
 
   await ensureDirectory(filePath);
   await fs.writeFile(filePath, normalised, "utf8");
-  return true;
+
+  return { changed: true, reason: exists ? "updated" : "created" };
 }
 
 async function collectAgentFiles(dir, results) {
@@ -172,18 +207,105 @@ async function collectAgentFiles(dir, results) {
   }
 }
 
+function normaliseForSort(relativePath) {
+  return relativePath.split(path.sep).join("/");
+}
+
+async function removeFileAndCleanup(filePath) {
+  await fs.unlink(filePath);
+
+  let currentDir = path.dirname(filePath);
+  while (currentDir.startsWith(repoRoot) && currentDir !== repoRoot) {
+    let entries;
+    try {
+      entries = await fs.readdir(currentDir);
+    } catch (error) {
+      if (error.code === "ENOENT") {
+        currentDir = path.dirname(currentDir);
+        continue;
+      }
+
+      throw error;
+    }
+
+    if (entries.length > 0) {
+      break;
+    }
+
+    try {
+      await fs.rmdir(currentDir);
+    } catch (error) {
+      if (error.code === "ENOTEMPTY") {
+        break;
+      }
+
+      if (error.code !== "ENOENT") {
+        throw error;
+      }
+    }
+
+    currentDir = path.dirname(currentDir);
+  }
+}
+
 async function main() {
+  const flags = parseFlags(process.argv.slice(2));
+  const checkOnly = flags.check;
   const expected = new Map();
+  const duplicatePaths = new Set();
+  const relativePaths = [];
+
   for (const item of manifest) {
     const absolutePath = path.resolve(repoRoot, item.relativePath);
-    expected.set(absolutePath, item.content);
+    if (expected.has(absolutePath)) {
+      duplicatePaths.add(path.relative(repoRoot, absolutePath));
+    } else {
+      expected.set(absolutePath, item.content);
+    }
+    relativePaths.push(normaliseForSort(item.relativePath));
+  }
+
+  if (duplicatePaths.size > 0) {
+    const duplicateMessage = lines(
+      "Manifest contains duplicate AGENTS targets:",
+      ...Array.from(duplicatePaths)
+        .sort((a, b) => a.localeCompare(b))
+        .map((relativePath) => `- ${relativePath}`),
+      "",
+      "Deduplicate the manifest entries before rerunning the sync.",
+    );
+    throw new Error(duplicateMessage);
+  }
+
+  const sortedPaths = [...relativePaths].sort((a, b) => a.localeCompare(b));
+  for (let index = 0; index < relativePaths.length; index += 1) {
+    if (relativePaths[index] !== sortedPaths[index]) {
+      const message = lines(
+        "Manifest entries must be sorted lexicographically by relative path.",
+        "Current order:",
+        ...relativePaths.map((value) => `- ${value}`),
+        "",
+        "Expected order:",
+        ...sortedPaths.map((value) => `- ${value}`),
+      );
+      throw new Error(message);
+    }
   }
 
   let changed = false;
+  const mismatches = [];
   for (const [filePath, content] of expected.entries()) {
-    const didWrite = await writeFileIfChanged(filePath, content);
-    if (didWrite) {
-      console.info(`Updated ${path.relative(repoRoot, filePath)}`);
+    const result = await ensureFileContent(filePath, content, { checkOnly });
+    if (!result.changed) {
+      continue;
+    }
+
+    if (checkOnly) {
+      mismatches.push({ filePath, reason: result.reason });
+    } else {
+      const relativePath = path.relative(repoRoot, filePath);
+      const verb = result.reason === "created" ? "Created" : "Updated";
+      console.info(`${verb} ${relativePath}`);
       changed = true;
     }
   }
@@ -191,12 +313,53 @@ async function main() {
   const discovered = new Set();
   await collectAgentFiles(repoRoot, discovered);
 
+  const unexpected = [];
   for (const filePath of discovered) {
     if (!expected.has(filePath)) {
-      await fs.unlink(filePath);
-      console.info(`Removed unmanaged agent file ${path.relative(repoRoot, filePath)}`);
+      unexpected.push(filePath);
+    }
+  }
+
+  if (unexpected.length > 0) {
+    const sortedUnexpected = unexpected
+      .map((filePath) => path.relative(repoRoot, filePath))
+      .sort((a, b) => a.localeCompare(b));
+
+    if (checkOnly) {
+      const message = lines(
+        "Detected AGENTS files without manifest entries:",
+        ...sortedUnexpected.map((relativePath) => `- ${relativePath}`),
+        "",
+        "Update the manifest in scripts/manage-agents.mjs to cover these scoped directories or remove the files.",
+      );
+      throw new Error(message);
+    }
+
+    for (const relativePath of sortedUnexpected) {
+      const absolutePath = path.resolve(repoRoot, relativePath);
+      await removeFileAndCleanup(absolutePath);
+      console.info(`Removed ${relativePath}`);
       changed = true;
     }
+  }
+
+  if (checkOnly) {
+    if (mismatches.length > 0) {
+      const message = lines(
+        "AGENTS manifest is out of sync. Run `npm run agent:sync` to regenerate:",
+        ...mismatches
+          .map(({ filePath, reason }) => {
+            const relativePath = path.relative(repoRoot, filePath);
+            const suffix = reason === "missing" ? "(missing)" : "(outdated)";
+            return `- ${relativePath} ${suffix}`;
+          })
+          .sort((a, b) => a.localeCompare(b)),
+      );
+      throw new Error(message);
+    }
+
+    console.info("AGENTS manifest is in sync.");
+    return;
   }
 
   if (!changed) {
