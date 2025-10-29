@@ -1,0 +1,25 @@
+diff --git a/node_modules/react-native-maps/android/src/main/jni/CMakeLists.txt b/node_modules/react-native-maps/android/src/main/jni/CMakeLists.txt
+index ddb85f5..f8f9f0f 100644
+--- a/node_modules/react-native-maps/android/src/main/jni/CMakeLists.txt
++++ b/node_modules/react-native-maps/android/src/main/jni/CMakeLists.txt
+@@ -25,4 +25,19 @@ target_link_libraries(
+   reactnative
+ )
+ 
+-target_compile_reactnative_options(react_codegen_RNMapsSpecs PRIVATE)
++if (TARGET common_flags)
++  target_link_libraries(
++    react_codegen_RNMapsSpecs
++    common_flags
++  )
++endif()
++
++target_compile_options(
++  react_codegen_RNMapsSpecs
++  PRIVATE
++  -DLOG_TAG=\"ReactNative\"
++  -fexceptions
++  -frtti
++  -std=c++20
++  -Wall
++)
