@@ -1,3 +1,26 @@
+const fs = require("node:fs");
+const path = require("node:path");
+
+function resolveIosAppName() {
+  const podfilePath = path.join(__dirname, "ios", "Podfile");
+
+  try {
+    const contents = fs.readFileSync(podfilePath, "utf8");
+    const match = contents.match(/target ['"](.+?)['"] do/);
+
+    if (match && match[1]) {
+      return match[1];
+    }
+  } catch (error) {
+    console.warn(`[detox] Failed to read Podfile while inferring the iOS app name: ${error.message}`);
+  }
+
+  return "Netsight";
+}
+
+const iosAppName = resolveIosAppName();
+const iosBuildProductsDir = path.posix.join("ios", "build", "Build", "Products", "Release-iphonesimulator");
+
 /** @type {Detox.DetoxConfig} */
 module.exports = {
   testRunner: {
@@ -12,18 +35,18 @@ module.exports = {
   apps: {
     "ios.sim.release": {
       type: "ios.app",
-      binaryPath: "ios/build/Build/Products/Release-iphonesimulator/Netsight.app",
+      binaryPath: path.posix.join(iosBuildProductsDir, `${iosAppName}.app`),
       build: [
-        "EXPO_NO_TELEMETRY=1 EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 npx expo prebuild --platform ios --non-interactive",
+        "CI=1 EXPO_NO_TELEMETRY=1 EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 npx expo prebuild --platform ios",
         "EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 npx pod-install",
-        "cd ios && EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 xcodebuild -workspace Netsight.xcworkspace -scheme Netsight -configuration Release -sdk iphonesimulator -derivedDataPath build",
+        `cd ios && EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 xcodebuild -workspace ${iosAppName}.xcworkspace -scheme ${iosAppName} -configuration Release -sdk iphonesimulator -derivedDataPath build`,
       ].join(" && "),
     },
     "android.emu.release": {
       type: "android.apk",
       binaryPath: "android/app/build/outputs/apk/release/app-release.apk",
       build: [
-        "EXPO_NO_TELEMETRY=1 EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 npx expo prebuild --platform android --non-interactive --no-install",
+        "CI=1 EXPO_NO_TELEMETRY=1 EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 npx expo prebuild --platform android --no-install",
         "cd android && EXPO_PUBLIC_ENABLE_CONTROLLER_DEBUG=1 ./gradlew assembleRelease",
       ].join(" && "),
     },
