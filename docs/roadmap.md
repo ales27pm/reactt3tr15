@@ -9,10 +9,10 @@ modules that will be affected so engineers can jump straight into implementation
    - Extend `src/state/tetrisStore.ts` to factor combo streaks and lock delays into level progression.
    - Mirror the new progression rules in `src/state/__tests__/tetrisStore.test.ts` to lock behaviour.
    - Surface the live difficulty tier inside `src/screens/TetrisScreen.tsx` so players understand speed shifts.
-2. **Controller support**
-   - Introduce an input adapter in `src/utils/input.ts` that maps gamepad events into store actions.
-   - Update `src/screens/TetrisScreen.tsx` to register the adapter with `react-native-game-controller`.
-   - Add QA coverage with Detox to ensure controller-connected devices pass the main loop smoke test.
+2. **Controller support (shipped)**
+   - ✅ Input adapter in `src/utils/input.ts` now maps native and synthetic gamepad events directly into the Tetris store actions.
+   - ✅ `src/screens/TetrisScreen.tsx` registers the adapter with `react-native-game-controller` and exposes a debug harness for automated tests.
+   - ✅ Detox coverage exercises the controller-driven main loop smoke test so connected devices stay in sync.
 
 ## Retention & Rewards (Medium Priority)
 
